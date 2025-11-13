@@ -147,6 +147,7 @@ CREATE TABLE IF NOT EXISTS skills (
     crit_bonus DECIMAL(4,2) DEFAULT 0.0, -- extra crit chance
     stun_chance DECIMAL(4,2) DEFAULT 0.0, -- chance to stun (0-100)
     defense_break DECIMAL(4,2) DEFAULT 0.0, -- ignore % of defense
+    is_aoe BOOLEAN DEFAULT FALSE, -- Area of Effect - hits all enemies
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

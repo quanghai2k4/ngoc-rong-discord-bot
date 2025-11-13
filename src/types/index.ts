@@ -112,6 +112,7 @@ export interface Skill {
   crit_bonus: number;
   stun_chance: number;
   defense_break: number;
+  is_aoe: boolean;
   created_at: Date;
 }
 

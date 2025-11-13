@@ -62,31 +62,31 @@ INSERT INTO quests (name, description, required_level, experience_reward, gold_r
 
 -- Insert skills (race-specific and universal)
 -- Saiyan skills (race_id = 1)
-INSERT INTO skills (name, description, skill_type, race_id, required_level, ki_cost, damage_multiplier, crit_bonus, defense_break) VALUES
-('Kamehameha', '🌊 Sóng năng lượng kinh điển! Gây sát thương lớn', 'attack', NULL, 3, 30, 2.0, 10.0, 0.2),
-('Galick Gun', '💜 Kỹ năng đặc trưng của hoàng tử Saiyan', 'attack', 1, 5, 35, 2.2, 15.0, 0.3),
-('Final Flash', '⚡ Tấn công tối thượng! Phá vỡ mọi phòng thủ', 'attack', 1, 10, 50, 3.0, 20.0, 0.5),
-('Super Saiyan Rage', '💥 Bùng nổ sức mạnh Saiyan! Tăng toàn bộ sát thương', 'buff', 1, 8, 40, 0.0, 25.0, 0.0);
+INSERT INTO skills (name, description, skill_type, race_id, required_level, ki_cost, damage_multiplier, crit_bonus, defense_break, is_aoe) VALUES
+('Kamehameha', '🌊 Sóng năng lượng kinh điển! Gây sát thương lớn', 'attack', NULL, 3, 30, 2.0, 10.0, 0.2, TRUE),
+('Galick Gun', '💜 Kỹ năng đặc trưng của hoàng tử Saiyan', 'attack', 1, 5, 35, 2.2, 15.0, 0.3, FALSE),
+('Final Flash', '⚡ Tấn công tối thượng! Phá vỡ mọi phòng thủ', 'attack', 1, 10, 50, 3.0, 20.0, 0.5, TRUE),
+('Super Saiyan Rage', '💥 Bùng nổ sức mạnh Saiyan! Tăng toàn bộ sát thương', 'buff', 1, 8, 40, 0.0, 25.0, 0.0, FALSE);
 
 -- Namek skills (race_id = 2)
-INSERT INTO skills (name, description, skill_type, race_id, required_level, ki_cost, damage_multiplier, heal_amount) VALUES
-('Makankosappo', '🎯 Súng quỷ xuyên thấu! Chính xác chết người', 'attack', 2, 5, 40, 2.5, 0),
-('Masenko', '💚 Tia năng lượng Namek mạnh mẽ', 'attack', 2, 3, 30, 1.8, 0),
-('Regeneration', '🌟 Hồi phục năng lượng sống bằng sức mạnh Namek', 'heal', 2, 4, 25, 0.0, 100),
-('Mystic Attack', '🔮 Kỹ năng thần bí của người Namek', 'attack', 2, 10, 45, 2.8, 0);
+INSERT INTO skills (name, description, skill_type, race_id, required_level, ki_cost, damage_multiplier, heal_amount, is_aoe) VALUES
+('Makankosappo', '🎯 Súng quỷ xuyên thấu! Chính xác chết người', 'attack', 2, 5, 40, 2.5, 0, FALSE),
+('Masenko', '💚 Tia năng lượng Namek mạnh mẽ', 'attack', 2, 3, 30, 1.8, 0, FALSE),
+('Regeneration', '🌟 Hồi phục năng lượng sống bằng sức mạnh Namek', 'heal', 2, 4, 25, 0.0, 100, FALSE),
+('Mystic Attack', '🔮 Kỹ năng thần bí của người Namek', 'attack', 2, 10, 45, 2.8, 0, FALSE);
 
 -- Earthling skills (race_id = 3)
-INSERT INTO skills (name, description, skill_type, race_id, required_level, ki_cost, damage_multiplier, stun_chance) VALUES
-('Kienzan', '💿 Đĩa cưa năng lượng! Có thể gây choáng', 'attack', 3, 5, 35, 2.0, 30.0),
-('Solar Flare', '☀️ Chiêu lóa mắt! Gây choáng địch', 'attack', 3, 3, 20, 1.0, 80.0),
-('Tri-Beam', '📐 Kỹ năng ba mắt! Tiêu tốn nhiều năng lượng', 'attack', 3, 8, 45, 2.6, 15.0),
-('Wolf Fang Fist', '🐺 Đấm liên hoàn sói dữ', 'attack', 3, 4, 25, 1.6, 5.0);
+INSERT INTO skills (name, description, skill_type, race_id, required_level, ki_cost, damage_multiplier, stun_chance, is_aoe) VALUES
+('Kienzan', '💿 Đĩa cưa năng lượng! Có thể gây choáng', 'attack', 3, 5, 35, 2.0, 30.0, FALSE),
+('Solar Flare', '☀️ Chiêu lóa mắt! Gây choáng địch', 'attack', 3, 3, 20, 1.0, 80.0, FALSE),
+('Tri-Beam', '📐 Kỹ năng ba mắt! Tiêu tốn nhiều năng lượng', 'attack', 3, 8, 45, 2.6, 15.0, TRUE),
+('Wolf Fang Fist', '🐺 Đấm liên hoàn sói dữ', 'attack', 3, 4, 25, 1.6, 5.0, FALSE);
 
 -- Universal skills (all races)
-INSERT INTO skills (name, description, skill_type, race_id, required_level, ki_cost, damage_multiplier, crit_bonus) VALUES
-('Ki Blast', '💨 Tấn công năng lượng cơ bản', 'attack', NULL, 1, 15, 1.3, 5.0),
-('Spirit Bomb', '🌍 Nguyên khí đạn! Thu thập năng lượng vũ trụ', 'attack', NULL, 15, 80, 4.0, 30.0),
-('Kaio-ken', '🔴 Tăng tốc chiến đấu gấp bội', 'buff', NULL, 7, 35, 0.0, 15.0);
+INSERT INTO skills (name, description, skill_type, race_id, required_level, ki_cost, damage_multiplier, crit_bonus, is_aoe) VALUES
+('Ki Blast', '💨 Tấn công năng lượng cơ bản', 'attack', NULL, 1, 15, 1.3, 5.0, FALSE),
+('Spirit Bomb', '🌍 Nguyên khí đạn! Thu thập năng lượng vũ trụ', 'attack', NULL, 15, 80, 4.0, 30.0, TRUE),
+('Kaio-ken', '🔴 Tăng tốc chiến đấu gấp bội', 'buff', NULL, 7, 35, 0.0, 15.0, FALSE);
 
 -- Auto-learn basic skills for each race when character is created
 -- These will be handled in CharacterService when creating character

@@ -30,56 +30,81 @@ export const huntCommand: Command = {
       return;
     }
 
-    // Find a monster based on character level
+    // Spawn 1-3 monsters
     const minLevel = Math.max(1, character.level - 2);
     const maxLevel = character.level + 3;
-    const monster = await MonsterService.getRandomByLevel(minLevel, maxLevel);
+    const monsters = await MonsterService.spawnMonsters(minLevel, maxLevel);
 
-    if (!monster) {
+    if (monsters.length === 0) {
       await interaction.editReply('❌ Không tìm thấy quái vật nào phù hợp với level của bạn!');
       return;
     }
 
+    // Build start message
     const startEmbed = new EmbedBuilder()
       .setColor('#FF0000')
       .setTitle('⚔️ Bắt đầu chiến đấu!')
-      .setDescription(`Bạn gặp **${monster.name}** (Level **\`${monster.level}\`**)`)
-      .addFields({
-        name: '📊 Thông tin quái vật',
+      .setDescription(
+        monsters.length === 1
+          ? `Bạn gặp **${monsters[0].name}** (Level **\`${monsters[0].level}\`**)`
+          : `⚠️ Bạn bị bao vây bởi **${monsters.length} quái vật**!`
+      );
+
+    // Thêm thông tin từng quái
+    for (let i = 0; i < monsters.length; i++) {
+      const monster = monsters[i];
+      startEmbed.addFields({
+        name: `${i + 1}. ${monster.name} (Lv.${monster.level})`,
         value: `❤️ HP: **\`${monster.hp}\`** • ⚔️ ATK: **\`${monster.attack}\`** • 🛡️ DEF: **\`${monster.defense}\`**`,
         inline: false
-      })
-      .setFooter({ text: '⏳ Đang chiến đấu...' });
+      });
+    }
+
+    startEmbed.setFooter({ text: '⏳ Đang chiến đấu...' });
 
     await interaction.editReply({ embeds: [startEmbed] });
 
     // Simulate battle
     setTimeout(async () => {
-      const result = await BattleService.battle(character, monster);
+      const result = await BattleService.battle(character, monsters);
 
       let battleLog = '';
       
-      // Show only key rounds (first, last few, and when someone is low HP)
+      // Show only key rounds
       const importantRounds = result.rounds.filter((round, index) => 
         index === 0 || 
         index >= result.rounds.length - 3 || 
         round.characterHp < character.max_hp * 0.3 ||
-        round.monsterHp < monster.hp * 0.3
+        round.monsterStates.some(m => m.hp < m.maxHp * 0.3 && m.hp > 0)
       );
 
       for (const round of importantRounds.slice(0, 5)) {
         battleLog += `╭─ **Hiệp ${round.round}**\n`;
         battleLog += `│ ${round.characterAction}\n`;
-        battleLog += `│ ${round.monsterAction}\n`;
         
-        // Progress bars cho HP của cả 2 bên
+        // Monster actions
+        for (const monAction of round.monsterActions) {
+          battleLog += `│ ${monAction}\n`;
+        }
+        
+        // HP bars
         const charHpPerc = Math.max(0, Math.floor((round.characterHp / character.max_hp) * 5));
         const charHpBar = '█'.repeat(charHpPerc) + '░'.repeat(5 - charHpPerc);
+        battleLog += `│ ❤️ Bạn: ${charHpBar} \`${round.characterHp}/${character.max_hp}\`\n`;
         
-        const monHpPerc = Math.max(0, Math.floor((round.monsterHp / monster.hp) * 5));
-        const monHpBar = '█'.repeat(monHpPerc) + '░'.repeat(5 - monHpPerc);
+        // Monster HP bars
+        for (const monState of round.monsterStates) {
+          const monHpPerc = Math.max(0, Math.floor((monState.hp / monState.maxHp) * 5));
+          const monHpBar = '█'.repeat(monHpPerc) + '░'.repeat(5 - monHpPerc);
+          const status = monState.hp === 0 ? '💀' : '🔥';
+          battleLog += `│ ${status} ${monState.name}: ${monHpBar} \`${monState.hp}/${monState.maxHp}\`\n`;
+        }
         
-        battleLog += `╰─ ❤️ Bạn: ${charHpBar} \`${round.characterHp}\` | Quái: ${monHpBar} \`${round.monsterHp}\`\n\n`;
+        battleLog += `╰─────\n\n`;
+      }
+
+      if (importantRounds.length < result.rounds.length) {
+        battleLog += `*...và ${result.rounds.length - importantRounds.length} hiệp khác*\n\n`;
       }
 
       const resultEmbed = new EmbedBuilder()
@@ -90,7 +115,7 @@ export const huntCommand: Command = {
           value: battleLog,
           inline: false
         })
-        .setFooter({ text: `Số hiệp: ${result.rounds.length}` });
+        .setFooter({ text: `Số hiệp: ${result.rounds.length} | Quái hạ: ${result.monstersDefeated}/${monsters.length}` });
 
       if (result.won) {
         resultEmbed.addFields({
