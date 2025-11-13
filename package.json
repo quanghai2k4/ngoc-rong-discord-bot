@@ -1,0 +1,28 @@
+{
+  "name": "ngoc-rong-discord-bot",
+  "version": "1.0.0",
+  "description": "Discord RPG bot inspired by Ngoc Rong Online",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "watch": "tsc -w",
+    "migrate": "ts-node src/database/migrate.ts",
+    "seed": "ts-node src/database/seed.ts"
+  },
+  "keywords": ["discord", "bot", "rpg", "game"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "pg": "^8.11.3",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/pg": "^8.10.9",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2"
+  }
+}
