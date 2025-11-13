@@ -4,7 +4,7 @@ import { Player } from '../types';
 export class PlayerService {
   static async findByDiscordId(discordId: string): Promise<Player | null> {
     const result = await query(
-      'SELECT * FROM players WHERE discord_id = $1',
+      'SELECT id, discord_id, username, created_at, last_login FROM players WHERE discord_id = $1',
       [discordId]
     );
     return result.rows[0] || null;
@@ -12,7 +12,7 @@ export class PlayerService {
 
   static async create(discordId: string, username: string): Promise<Player> {
     const result = await query(
-      'INSERT INTO players (discord_id, username) VALUES ($1, $2) RETURNING *',
+      'INSERT INTO players (discord_id, username) VALUES ($1, $2) RETURNING id, discord_id, username, created_at, last_login',
       [discordId, username]
     );
     return result.rows[0];

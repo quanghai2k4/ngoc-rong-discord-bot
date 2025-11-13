@@ -15,6 +15,7 @@ dotenv.config();
 import { startCommand } from './commands/start';
 import { profileCommand } from './commands/profile';
 import { huntCommand } from './commands/hunt';
+import { bossCommand } from './commands/boss';
 import { inventoryCommand } from './commands/inventory';
 import { skillsCommand } from './commands/skills';
 
@@ -37,6 +38,7 @@ const commands = new Collection<string, Command>();
 commands.set('start', startCommand);
 commands.set('profile', profileCommand);
 commands.set('hunt', huntCommand);
+commands.set('boss', bossCommand);
 commands.set('inventory', inventoryCommand);
 commands.set('skills', skillsCommand);
 

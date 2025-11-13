@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS characters (
     defense INTEGER DEFAULT 10,
     speed INTEGER DEFAULT 10,
     gold INTEGER DEFAULT 100,
-    location VARCHAR(255) DEFAULT 'Trái Đất',
+    location VARCHAR(255) DEFAULT 'Làng Aru',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(player_id)
 );
@@ -86,7 +86,10 @@ CREATE TABLE IF NOT EXISTS monsters (
     speed INTEGER DEFAULT 5,
     experience_reward INTEGER DEFAULT 10,
     gold_reward INTEGER DEFAULT 10,
-    location VARCHAR(255) DEFAULT 'Trái Đất'
+    min_level INTEGER DEFAULT 1,
+    max_level INTEGER DEFAULT 5,
+    is_boss BOOLEAN DEFAULT FALSE,
+    is_super BOOLEAN DEFAULT FALSE
 );
 
 -- Monster drops
@@ -184,3 +187,4 @@ CREATE INDEX idx_character_quests_character_id ON character_quests(character_id)
 CREATE INDEX idx_battle_logs_character_id ON battle_logs(character_id);
 CREATE INDEX idx_character_skills_character_id ON character_skills(character_id);
 CREATE INDEX idx_skills_race_id ON skills(race_id);
+CREATE INDEX idx_monsters_level_range ON monsters(min_level, max_level);

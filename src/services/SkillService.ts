@@ -5,7 +5,10 @@ export class SkillService {
   // Lấy tất cả skills của một character
   static async getCharacterSkills(characterId: number): Promise<Skill[]> {
     const result = await query(
-      `SELECT s.* FROM skills s
+      `SELECT s.id, s.name, s.description, s.skill_type, s.race_id, s.required_level,
+              s.ki_cost, s.cooldown, s.damage_multiplier, s.heal_amount, s.crit_bonus,
+              s.stun_chance, s.defense_break, s.is_aoe
+       FROM skills s
        JOIN character_skills cs ON s.id = cs.skill_id
        WHERE cs.character_id = $1
        ORDER BY s.required_level, s.ki_cost`,
@@ -17,7 +20,10 @@ export class SkillService {
   // Lấy skills có thể học theo race và level
   static async getAvailableSkills(raceId: number, level: number): Promise<Skill[]> {
     const result = await query(
-      `SELECT * FROM skills 
+      `SELECT id, name, description, skill_type, race_id, required_level,
+              ki_cost, cooldown, damage_multiplier, heal_amount, crit_bonus,
+              stun_chance, defense_break, is_aoe
+       FROM skills 
        WHERE (race_id = $1 OR race_id IS NULL) 
        AND required_level <= $2
        ORDER BY required_level, ki_cost`,
@@ -50,14 +56,22 @@ export class SkillService {
 
   // Lấy skill by ID
   static async getSkillById(skillId: number): Promise<Skill | null> {
-    const result = await query('SELECT * FROM skills WHERE id = $1', [skillId]);
+    const result = await query(
+      `SELECT id, name, description, skill_type, race_id, required_level,
+              ki_cost, cooldown, damage_multiplier, heal_amount, crit_bonus,
+              stun_chance, defense_break, is_aoe
+       FROM skills WHERE id = $1`,
+      [skillId]
+    );
     return result.rows[0] || null;
   }
 
   // Lấy skills của monster
   static async getMonsterSkills(monsterId: number): Promise<Array<Skill & { use_probability: number }>> {
     const result = await query(
-      `SELECT s.*, ms.use_probability 
+      `SELECT s.id, s.name, s.description, s.skill_type, s.race_id, s.required_level,
+              s.ki_cost, s.cooldown, s.damage_multiplier, s.heal_amount, s.crit_bonus,
+              s.stun_chance, s.defense_break, s.is_aoe, ms.use_probability 
        FROM skills s
        JOIN monster_skills ms ON s.id = ms.skill_id
        WHERE ms.monster_id = $1`,
@@ -69,7 +83,9 @@ export class SkillService {
   // Lấy TẤT CẢ skills theo race (đã học và chưa học)
   static async getAllSkillsByRace(characterId: number, raceId: number): Promise<Array<Skill & { learned: boolean }>> {
     const result = await query(
-      `SELECT s.*, 
+      `SELECT s.id, s.name, s.description, s.skill_type, s.race_id, s.required_level,
+              s.ki_cost, s.cooldown, s.damage_multiplier, s.heal_amount, s.crit_bonus,
+              s.stun_chance, s.defense_break, s.is_aoe,
               CASE WHEN cs.character_id IS NOT NULL THEN true ELSE false END as learned
        FROM skills s
        LEFT JOIN character_skills cs ON s.id = cs.skill_id AND cs.character_id = $1

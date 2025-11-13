@@ -20,6 +20,9 @@ FROM node:18-alpine
 
 WORKDIR /app
 
+# Install postgresql-client for psql command
+RUN apk add --no-cache postgresql-client
+
 # Copy package files
 COPY package*.json ./
 
@@ -30,7 +33,12 @@ RUN npm ci --only=production
 COPY --from=builder /app/dist ./dist
 
 # Copy database files for migration/seeding
-COPY --from=builder /app/src/database ./src/database
+COPY database/init.sql ./database/init.sql
+COPY database/seed.sql ./database/seed.sql
+
+# Copy entrypoint script
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 
 # Create a non-root user
 RUN addgroup -g 1001 -S nodejs && \
@@ -38,5 +46,5 @@ RUN addgroup -g 1001 -S nodejs && \
 
 USER nodejs
 
-# Start the bot
-CMD ["node", "dist/index.js"]
+# Start the bot with entrypoint
+CMD ["./docker-entrypoint.sh"]

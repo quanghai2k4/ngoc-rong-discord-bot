@@ -30,10 +30,12 @@ export const huntCommand: Command = {
       return;
     }
 
-    // Spawn 1-3 monsters
-    const minLevel = Math.max(1, character.level - 2);
-    const maxLevel = character.level + 3;
-    const monsters = await MonsterService.spawnMonsters(minLevel, maxLevel);
+    // Random vị trí mới mỗi lần hunt
+    const newLocation = CharacterService.getRandomLocation();
+    await CharacterService.updateLocation(character.id, newLocation);
+    
+    // Hunt command chỉ spawn quái thường (không phải boss)
+    const monsters = await MonsterService.spawnMonsters(character.level, false);
 
     if (monsters.length === 0) {
       await interaction.editReply('❌ Không tìm thấy quái vật nào phù hợp với level của bạn!');
@@ -45,9 +47,10 @@ export const huntCommand: Command = {
       .setColor('#FF0000')
       .setTitle('⚔️ Bắt đầu chiến đấu!')
       .setDescription(
-        monsters.length === 1
-          ? `Bạn gặp **${monsters[0].name}** (Level **\`${monsters[0].level}\`**)`
-          : `⚠️ Bạn bị bao vây bởi **${monsters.length} quái vật**!`
+        `📍 **${newLocation}**\n\n` +
+        (monsters.length === 1
+          ? `Bạn gặp **${monsters[0].name}** (Level **\`${monsters[0].level}\`**)${monsters[0].is_super ? ' ⭐' : ''}`
+          : `⚠️ Bạn bị bao vây bởi **${monsters.length} quái vật**!`)
       );
 
     // Thêm thông tin từng quái
@@ -68,54 +71,86 @@ export const huntCommand: Command = {
     setTimeout(async () => {
       const result = await BattleService.battle(character, monsters);
 
-      let battleLog = '';
-      
-      // Show only key rounds
-      const importantRounds = result.rounds.filter((round, index) => 
-        index === 0 || 
-        index >= result.rounds.length - 3 || 
-        round.characterHp < character.max_hp * 0.3 ||
-        round.monsterStates.some(m => m.hp < m.maxHp * 0.3 && m.hp > 0)
-      );
-
-      for (const round of importantRounds.slice(0, 5)) {
-        battleLog += `╭─ **Hiệp ${round.round}**\n`;
-        battleLog += `│ ${round.characterAction}\n`;
-        
-        // Monster actions
-        for (const monAction of round.monsterActions) {
-          battleLog += `│ ${monAction}\n`;
-        }
-        
-        // HP bars
-        const charHpPerc = Math.max(0, Math.floor((round.characterHp / character.max_hp) * 5));
-        const charHpBar = '█'.repeat(charHpPerc) + '░'.repeat(5 - charHpPerc);
-        battleLog += `│ ❤️ Bạn: ${charHpBar} \`${round.characterHp}/${character.max_hp}\`\n`;
-        
-        // Monster HP bars
-        for (const monState of round.monsterStates) {
-          const monHpPerc = Math.max(0, Math.floor((monState.hp / monState.maxHp) * 5));
-          const monHpBar = '█'.repeat(monHpPerc) + '░'.repeat(5 - monHpPerc);
-          const status = monState.hp === 0 ? '💀' : '🔥';
-          battleLog += `│ ${status} ${monState.name}: ${monHpBar} \`${monState.hp}/${monState.maxHp}\`\n`;
-        }
-        
-        battleLog += `╰─────\n\n`;
-      }
-
-      if (importantRounds.length < result.rounds.length) {
-        battleLog += `*...và ${result.rounds.length - importantRounds.length} hiệp khác*\n\n`;
-      }
+      // Kiểm tra xem có boss hoặc super monster không
+      const hasBoss = monsters.some(m => m.is_boss || m.is_super);
 
       const resultEmbed = new EmbedBuilder()
         .setColor(result.won ? '#00FF00' : '#FF0000')
-        .setTitle(result.won ? '🎉 CHIẾN THẮNG!' : '💀 THẤT BẠI!')
-        .addFields({
+        .setTitle(result.won ? '🎉 CHIẾN THẮNG!' : '💀 THẤT BẠI!');
+
+      // Chỉ hiển thị chi tiết hiệp đấu nếu có boss/super monster
+      if (hasBoss) {
+        let battleLog = '';
+        
+        // Show only key rounds
+        const importantRounds = result.rounds.filter((round, index) => 
+          index === 0 || 
+          index >= result.rounds.length - 3 || 
+          round.characterHp < character.max_hp * 0.3 ||
+          round.monsterStates.some(m => m.hp < m.maxHp * 0.3 && m.hp > 0)
+        );
+
+        for (const round of importantRounds.slice(0, 5)) {
+          battleLog += `╭─ **Hiệp ${round.round}**\n`;
+          
+          console.log(`[hunt.ts] Round ${round.round} - has actions:`, !!round.actions, 'length:', round.actions?.length);
+          
+          // Hiển thị actions theo thứ tự thực tế (turn order)
+          // Fallback to old format if actions array doesn't exist
+          if (round.actions && round.actions.length > 0) {
+            console.log(`[hunt.ts] Round ${round.round} - using actions array`);
+            for (const action of round.actions) {
+              battleLog += `│ ${action}\n`;
+            }
+          } else {
+            console.log(`[hunt.ts] Round ${round.round} - using fallback`);
+            // Fallback: hiển thị theo cách cũ
+            battleLog += `│ ${round.characterAction}\n`;
+            for (const monAction of round.monsterActions) {
+              battleLog += `│ ${monAction}\n`;
+            }
+          }
+          
+          // HP bars
+          const charHpPerc = Math.max(0, Math.floor((round.characterHp / character.max_hp) * 5));
+          const charHpBar = '█'.repeat(charHpPerc) + '░'.repeat(5 - charHpPerc);
+          battleLog += `│ ❤️ Bạn: ${charHpBar} \`${round.characterHp}/${character.max_hp}\`\n`;
+          
+          // Monster HP bars
+          for (const monState of round.monsterStates) {
+            const monHpPerc = Math.max(0, Math.floor((monState.hp / monState.maxHp) * 5));
+            const monHpBar = '█'.repeat(monHpPerc) + '░'.repeat(5 - monHpPerc);
+            const status = monState.hp === 0 ? '💀' : '🔥';
+            battleLog += `│ ${status} ${monState.name}: ${monHpBar} \`${monState.hp}/${monState.maxHp}\`\n`;
+          }
+          
+          battleLog += `╰─────\n\n`;
+        }
+
+        if (importantRounds.length < result.rounds.length) {
+          battleLog += `*...và ${result.rounds.length - importantRounds.length} hiệp khác*\n\n`;
+        }
+
+        resultEmbed.addFields({
           name: '⚔️ Diễn biến trận đấu',
           value: battleLog,
           inline: false
-        })
-        .setFooter({ text: `Số hiệp: ${result.rounds.length} | Quái hạ: ${result.monstersDefeated}/${monsters.length}` });
+        });
+        resultEmbed.setFooter({ text: `Số hiệp: ${result.rounds.length} | Quái hạ: ${result.monstersDefeated}/${monsters.length}` });
+      } else {
+        // Quái thường: Chỉ hiển thị tổng kết
+        let summary = '';
+        if (result.won) {
+          // Liệt kê quái đã hạ
+          const monsterNames = monsters.map(m => m.name).join(', ');
+          summary = `⚔️ Bạn đã **kết liễu** ${monsters.length > 1 ? `**${monsters.length} quái**: ` : ''}**${monsterNames}**!\n\n`;
+          summary += `⏱️ Chiến đấu kết thúc sau **${result.rounds.length}** hiệp`;
+        } else {
+          summary = `💀 Bạn đã bị đánh bại sau **${result.rounds.length}** hiệp chiến đấu`;
+        }
+        
+        resultEmbed.setDescription(summary);
+      }
 
       if (result.won) {
         resultEmbed.addFields({

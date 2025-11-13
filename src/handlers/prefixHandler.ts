@@ -1,4 +1,4 @@
-import { Message, EmbedBuilder } from 'discord.js';
+import { Message, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, ComponentType } from 'discord.js';
 import { PlayerService } from '../services/PlayerService';
 import { CharacterService } from '../services/CharacterService';
 import { MonsterService } from '../services/MonsterService';
@@ -28,6 +28,11 @@ export async function handlePrefixCommand(
     case 'san':
     case 'danhquai':
       await handleHunt(message);
+      break;
+    
+    case 'boss':
+    case 'thachdau':
+      await handleBoss(message);
       break;
     
     case 'inventory':
@@ -218,35 +223,44 @@ async function handleHunt(message: Message) {
     return;
   }
 
-  // Spawn 1-3 monsters
-  const minLevel = Math.max(1, character.level - 2);
-  const maxLevel = character.level + 3;
-  const monsters = await MonsterService.spawnMonsters(minLevel, maxLevel);
+  // Random vị trí mới mỗi lần hunt
+  const newLocation = CharacterService.getRandomLocation();
+  await CharacterService.updateLocation(character.id, newLocation);
+
+  // Kiểm tra xem có phải khu vực boss-only không
+  const isBossOnlyArea = CharacterService.isBossOnlyLocation(newLocation);
+  
+  // Spawn monsters dựa trên level của nhân vật và loại khu vực
+  const monsters = await MonsterService.spawnMonsters(character.level, isBossOnlyArea);
 
   if (monsters.length === 0) {
-    await message.reply('❌ Không tìm thấy quái vật nào phù hợp với level của bạn!');
+    if (isBossOnlyArea) {
+      await message.reply(`❌ Không có Boss nào phù hợp với level của bạn tại **${newLocation}**!\n💡 *Hãy lên level cao hơn để thách đấu Boss.*`);
+    } else {
+      await message.reply('❌ Không tìm thấy quái vật nào phù hợp với level của bạn!');
+    }
     return;
   }
 
   // Build start message
   const startEmbed = new EmbedBuilder()
-    .setColor('#FF0000')
-    .setTitle('⚔️ Bắt đầu chiến đấu!')
+    .setColor(isBossOnlyArea ? '#FFD700' : '#FF0000')
+    .setTitle(isBossOnlyArea ? '👑 THÁCH ĐẤU BOSS!' : '⚔️ Bắt đầu chiến đấu!')
     .setDescription(
-      monsters.length === 1
-        ? `Bạn gặp **${monsters[0].name}** (Level **\`${monsters[0].level}\`**)`
-        : `⚠️ Bạn bị bao vây bởi **${monsters.length} quái vật**!`
+      `📍 **${newLocation}**${isBossOnlyArea ? ' ✨' : ''}\n\n` +
+      (monsters.length === 1
+        ? `Bạn gặp **${monsters[0].is_super ? '⭐ ' : ''}${monsters[0].is_boss ? '👑 ' : ''}${monsters[0].name}** (Level **\`${monsters[0].level}\`**)${monsters[0].is_super ? ' ✨ **SIÊU QUÁI!**' : ''}${monsters[0].is_boss ? ' 👑 **BOSS**' : ''}`
+        : `⚠️ Bạn bị bao vây bởi **${monsters.length} quái vật**!`)
     );
 
   // Thêm thông tin từng quái
-  for (let i = 0; i < monsters.length; i++) {
-    const monster = monsters[i];
-    startEmbed.addFields({
-      name: `${i + 1}. ${monster.name} (Lv.${monster.level})`,
+  startEmbed.addFields(
+    ...monsters.map((monster, i) => ({
+      name: `${i + 1}. ${monster.is_super ? '⭐ ' : ''}${monster.name} (Lv.${monster.level})${monster.is_boss ? ' 👑 BOSS' : ''}${monster.is_super ? ' ✨ SIÊU' : ''}`,
       value: `❤️ HP: **\`${monster.hp}\`** • ⚔️ ATK: **\`${monster.attack}\`** • 🛡️ DEF: **\`${monster.defense}\`**`,
       inline: false
-    });
-  }
+    }))
+  );
 
   startEmbed.setFooter({ text: '⏳ Đang chiến đấu...' });
 
@@ -255,14 +269,25 @@ async function handleHunt(message: Message) {
   setTimeout(async () => {
     const result = await BattleService.battle(character, monsters);
 
+    // Kiểm tra xem có đánh boss không
+    const isBossFight = monsters.some(m => m.is_boss);
+
     let battleLog = '';
 
-    const importantRounds = result.rounds.filter((round, index) =>
-      index === 0 ||
-      index >= result.rounds.length - 3 ||
-      round.characterHp < character.max_hp * 0.3 ||
-      round.monsterStates.some(m => m.hp < m.maxHp * 0.3 && m.hp > 0)
-    );
+    // Nếu đánh boss -> hiển thị đầy đủ, nếu không -> chỉ hiệp cuối
+    let importantRounds;
+    if (isBossFight) {
+      // Boss fight: hiển thị hiệp đầu + hiệp cuối + hiệp quan trọng
+      importantRounds = result.rounds.filter((round, index) =>
+        index === 0 ||
+        index >= result.rounds.length - 3 ||
+        round.characterHp < character.max_hp * 0.3 ||
+        round.monsterStates.some(m => m.hp < m.maxHp * 0.3 && m.hp > 0)
+      );
+    } else {
+      // Hunt thường: chỉ hiệp cuối
+      importantRounds = result.rounds.slice(-1);
+    }
 
     for (const round of importantRounds.slice(0, 5)) {
       battleLog += `╭─ **Hiệp ${round.round}**\n`;
@@ -289,19 +314,283 @@ async function handleHunt(message: Message) {
       battleLog += `╰─────\n\n`;
     }
 
-    if (importantRounds.length < result.rounds.length) {
+    if (isBossFight && importantRounds.length < result.rounds.length) {
       battleLog += `*...và ${result.rounds.length - importantRounds.length} hiệp khác*\n\n`;
+    }
+
+    // Đảm bảo battleLog không rỗng và không quá dài (Discord limit: 1024 chars)
+    if (!battleLog || battleLog.trim().length === 0) {
+      battleLog = '*Trận đấu diễn ra quá nhanh!*';
+    } else if (battleLog.length > 1024) {
+      battleLog = battleLog.substring(0, 1000) + '\n*...(quá dài, đã cắt bớt)*';
     }
 
     const resultEmbed = new EmbedBuilder()
       .setColor(result.won ? '#00FF00' : '#FF0000')
       .setTitle(result.won ? '🎉 CHIẾN THẮNG!' : '💀 THẤT BẠI!')
-      .addFields({
+      .addFields([{
         name: '⚔️ Diễn biến trận đấu',
         value: battleLog,
         inline: false
-      })
+      }])
       .setFooter({ text: `Số hiệp: ${result.rounds.length} | Quái hạ: ${result.monstersDefeated}/${monsters.length}` });
+
+    if (result.won) {
+      resultEmbed.addFields([{
+        name: '🎁 Phần thưởng',
+        value: `🎯 EXP: **\`+${result.expGained}\`** • 💰 Vàng: **\`+${result.goldGained}\`**`,
+        inline: false
+      }]);
+
+      if (result.itemsDropped.length > 0) {
+        let itemsList = '';
+        for (const item of result.itemsDropped) {
+          itemsList += `• **${item.name}**\n`;
+        }
+        resultEmbed.addFields([{
+          name: '📦 Vật phẩm rơi',
+          value: itemsList,
+          inline: false
+        }]);
+      }
+    } else {
+      resultEmbed.addFields([{
+        name: '💔 Hậu quả',
+        value: '*Bạn mất 10% vàng và HP còn 1*',
+        inline: false
+      }]);
+    }
+
+    await battleMessage.edit({ embeds: [resultEmbed] });
+
+    // Gửi level up notification riêng biệt
+    if (result.won && result.leveledUp) {
+      const levelUpEmbed = new EmbedBuilder()
+        .setColor('#FFD700')
+        .setTitle('✨ LEVEL UP! ✨')
+        .setDescription(`Chúc mừng! Bạn đã lên **Level ${result.newLevel}**!`)
+        .addFields([
+          {
+            name: '📊 Chỉ số tăng',
+            value: 
+              '```diff\n' +
+              '+ HP: +20 (Max HP tăng)\n' +
+              '+ KI: +20 (Max KI tăng)\n' +
+              '+ Attack: +5\n' +
+              '+ Defense: +5\n' +
+              '+ Speed: +3\n' +
+              '```',
+            inline: false
+          }
+        ])
+        .setFooter({ text: '💚 HP và KI đã được hồi phục đầy!' })
+        .setTimestamp();
+
+      await message.reply({ embeds: [levelUpEmbed] });
+    }
+  }, 2000);
+}
+
+async function handleBoss(message: Message) {
+  const player = await PlayerService.findByDiscordId(message.author.id);
+  if (!player) {
+    await message.reply('❌ Bạn chưa có nhân vật! Sử dụng `zstart` để bắt đầu.');
+    return;
+  }
+
+  const character = await CharacterService.findByPlayerId(player.id);
+  if (!character) {
+    await message.reply('❌ Bạn chưa có nhân vật! Sử dụng `zstart` để bắt đầu.');
+    return;
+  }
+
+  if (character.hp <= 0) {
+    await message.reply('❌ Bạn đã hết HP! Hãy nghỉ ngơi để hồi phục. 💤');
+    return;
+  }
+
+  // Lấy tất cả boss từ database
+  const bossesResult = await query(
+    'SELECT id, name, min_level, max_level, hp, attack, defense, speed, experience_reward, gold_reward, critical_chance, critical_damage FROM monsters WHERE is_boss = true ORDER BY min_level'
+  );
+  const bosses = bossesResult.rows;
+
+  if (bosses.length === 0) {
+    await message.reply('❌ Không có Boss nào trong hệ thống!');
+    return;
+  }
+
+  // Tạo select menu với tất cả boss
+  const selectMenu = new StringSelectMenuBuilder()
+    .setCustomId('boss_select')
+    .setPlaceholder('👑 Chọn Boss để thách đấu...')
+    .addOptions(
+      bosses.map((boss: any) => ({
+        label: `${boss.name} (Lv.${boss.min_level}-${boss.max_level})`,
+        description: `HP: ${boss.hp} • ATK: ${boss.attack} • DEF: ${boss.defense} • SPD: ${boss.speed}`,
+        value: boss.id.toString()
+      }))
+    );
+
+  const row = new ActionRowBuilder<StringSelectMenuBuilder>().addComponents(selectMenu);
+
+  const menuEmbed = new EmbedBuilder()
+    .setColor('#FFD700')
+    .setTitle('👑 CHỌN BOSS ĐỂ THÁCH ĐẤU')
+    .setDescription(
+      `**${character.name}** (Level ${character.level})\n` +
+      `❤️ HP: ${character.hp}/${character.max_hp} • ⚔️ ATK: ${character.attack} • 🛡️ DEF: ${character.defense} • ⚡ SPD: ${character.speed}\n\n` +
+      `*Chọn Boss từ menu bên dưới để bắt đầu trận chiến!*`
+    )
+    .setFooter({ text: 'Menu sẽ tự động hết hạn sau 60 giây' });
+
+  const response = await message.reply({ 
+    embeds: [menuEmbed], 
+    components: [row] 
+  });
+
+  // Đợi user chọn boss
+  try {
+    const confirmation = await response.awaitMessageComponent({ 
+      componentType: ComponentType.StringSelect,
+      time: 60000,
+      filter: (i) => i.user.id === message.author.id
+    });
+
+    // Defer interaction ngay lập tức để tránh timeout
+    await confirmation.deferUpdate();
+
+    const selectedBossId = parseInt(confirmation.values[0]);
+    const selectedBossData = bosses.find((b: any) => b.id === selectedBossId);
+
+    if (!selectedBossData) {
+      await response.edit({ 
+        content: '❌ Boss không tồn tại!', 
+        embeds: [], 
+        components: [] 
+      });
+      return;
+    }
+
+    // Update reply để xóa menu
+    await response.edit({ 
+      embeds: [new EmbedBuilder()
+        .setColor('#FFD700')
+        .setTitle('⚔️ CHUẨN BỊ CHIẾN ĐẤU!')
+        .setDescription(`Đang tạo chiến trường cho trận đấu với **${selectedBossData.name}**...`)
+      ], 
+      components: [] 
+    });
+
+    // Random vị trí
+    const newLocation = CharacterService.getRandomLocation();
+    await CharacterService.updateLocation(character.id, newLocation);
+
+    // Spawn boss đã chọn với level ngẫu nhiên trong range
+    const bossLevel = Math.floor(Math.random() * (selectedBossData.max_level - selectedBossData.min_level + 1)) + selectedBossData.min_level;
+    const boss = {
+      id: selectedBossData.id,
+      name: selectedBossData.name,
+      level: bossLevel,
+      hp: selectedBossData.hp + (bossLevel - selectedBossData.min_level) * 50,
+      maxHp: selectedBossData.hp + (bossLevel - selectedBossData.min_level) * 50,
+      attack: selectedBossData.attack + (bossLevel - selectedBossData.min_level) * 5,
+      defense: selectedBossData.defense + (bossLevel - selectedBossData.min_level) * 4,
+      speed: selectedBossData.speed + (bossLevel - selectedBossData.min_level) * 2,
+      experience_reward: selectedBossData.experience_reward || 100,
+      gold_reward: selectedBossData.gold_reward || 200,
+      location: newLocation,
+      critical_chance: selectedBossData.critical_chance || 3,
+      critical_damage: selectedBossData.critical_damage || 1.3,
+      is_boss: true,
+      is_super: false
+    };
+
+    // Tạo thread cho boss fight  
+    const thread = await response.startThread({
+      name: `⚔️ Boss Fight: ${boss.name}`,
+      autoArchiveDuration: 60,
+      reason: `Boss fight giữa ${character.name} và ${boss.name}`
+    });
+
+    // Gửi thông báo vào thread
+    const startEmbed = new EmbedBuilder()
+      .setColor('#FFD700')
+      .setTitle('👑 THÁCH ĐẤU BOSS!')
+      .setDescription(
+        `📍 **${newLocation}** ✨\n\n` +
+        `**${character.name}** thách đấu **👑 ${boss.name}**!`
+      )
+      .addFields(
+        {
+          name: `👤 ${character.name} (Lv.${character.level})`,
+          value: `❤️ HP: \`${character.hp}\` • ⚔️ ATK: \`${character.attack}\` • 🛡️ DEF: \`${character.defense}\` • ⚡ SPD: \`${character.speed}\``,
+          inline: false
+        },
+        {
+          name: `👑 ${boss.name} (Lv.${boss.level})`,
+          value: `❤️ HP: \`${boss.hp}\` • ⚔️ ATK: \`${boss.attack}\` • 🛡️ DEF: \`${boss.defense}\` • ⚡ SPD: \`${boss.speed}\``,
+          inline: false
+        }
+      )
+      .setFooter({ text: '⚔️ Trận chiến bắt đầu!' });
+
+    await thread.send({ embeds: [startEmbed] });
+
+    // Battle
+    const result = await BattleService.battle(character, [boss]);
+
+    // Gửi từng hiệp vào thread
+    for (const round of result.rounds) {
+      // Actions
+      let actionsText = '';
+      if (round.actions && round.actions.length > 0) {
+        for (const action of round.actions) {
+          actionsText += `│ ${action}\n`;
+        }
+      } else {
+        actionsText += `│ ${round.characterAction}\n`;
+        for (const monAction of round.monsterActions) {
+          actionsText += `│ ${monAction}\n`;
+        }
+      }
+
+      // HP bars
+      const charHpPerc = Math.max(0, Math.floor((round.characterHp / character.max_hp) * 5));
+      const charHpBar = '█'.repeat(charHpPerc) + '░'.repeat(5 - charHpPerc);
+      const charHpStatus = `│ ❤️ ${character.name}: ${charHpBar} \`${round.characterHp}/${character.max_hp}\``;
+      
+      const bossState = round.monsterStates[0];
+      const bossHpPerc = Math.max(0, Math.floor((bossState.hp / bossState.maxHp) * 5));
+      const bossHpBar = '█'.repeat(bossHpPerc) + '░'.repeat(5 - bossHpPerc);
+      const status = bossState.hp === 0 ? '💀' : '👑';
+      const bossHpStatus = `│ ${status} ${bossState.name}: ${bossHpBar} \`${bossState.hp}/${bossState.maxHp}\``;
+
+      // Tạo embed cho từng hiệp với box drawing
+      const roundEmbed = new EmbedBuilder()
+        .setColor('#FFA500')
+        .setDescription(
+          `╭─ **Hiệp ${round.round}**\n` +
+          actionsText +
+          charHpStatus + `\n` +
+          bossHpStatus + `\n` +
+          `╰─────`
+        );
+
+      await thread.send({ embeds: [roundEmbed] });
+      await new Promise(resolve => setTimeout(resolve, 500)); // Delay giữa các hiệp
+    }
+
+    // Kết quả
+    const resultEmbed = new EmbedBuilder()
+      .setColor(result.won ? '#00FF00' : '#FF0000')
+      .setTitle(result.won ? '🎉 CHIẾN THẮNG!' : '💀 THẤT BẠI!')
+      .setDescription(
+        result.won 
+          ? `**${character.name}** đã đánh bại **${boss.name}**!` 
+          : `**${character.name}** đã bị **${boss.name}** đánh bại!`
+      )
+      .setFooter({ text: `Tổng số hiệp: ${result.rounds.length}` });
 
     if (result.won) {
       resultEmbed.addFields({
@@ -329,34 +618,63 @@ async function handleHunt(message: Message) {
       });
     }
 
-    await battleMessage.edit({ embeds: [resultEmbed] });
+    await thread.send({ embeds: [resultEmbed] });
 
-    // Gửi level up notification riêng biệt
+    // Level up trong thread nếu có
     if (result.won && result.leveledUp) {
       const levelUpEmbed = new EmbedBuilder()
         .setColor('#FFD700')
         .setTitle('✨ LEVEL UP! ✨')
-        .setDescription(`Chúc mừng! Bạn đã lên **Level ${result.newLevel}**!`)
-        .addFields(
-          {
-            name: '📊 Chỉ số tăng',
-            value: 
-              '```diff\n' +
-              '+ HP: +20 (Max HP tăng)\n' +
-              '+ KI: +20 (Max KI tăng)\n' +
-              '+ Attack: +5\n' +
-              '+ Defense: +5\n' +
-              '+ Speed: +3\n' +
-              '```',
-            inline: false
-          }
-        )
-        .setFooter({ text: '💚 HP và KI đã được hồi phục đầy!' })
-        .setTimestamp();
+        .setDescription(`🎊 Chúc mừng! **${character.name}** đã lên **Level \`${result.newLevel}\`**!`)
+        .addFields({
+          name: '📈 Tăng chỉ số',
+          value: '```diff\n+ HP & KI: +20\n+ ATK & DEF: +5\n+ SPD: +3\n```',
+          inline: false
+        })
+        .setFooter({ text: 'HP và KI đã được hồi phục đầy!' });
 
-      await message.reply({ embeds: [levelUpEmbed] });
+      await thread.send({ embeds: [levelUpEmbed] });
     }
-  }, 2000);
+
+    // Archive và lock thread sau 10 giây
+    setTimeout(async () => {
+      try {
+        await thread.setArchived(true);
+        await thread.setLocked(true);
+      } catch (error) {
+        console.error('Lỗi khi archive thread:', error);
+      }
+    }, 10000);
+
+    // Update original message
+    await response.edit({
+      embeds: [new EmbedBuilder()
+        .setColor(result.won ? '#00FF00' : '#FF0000')
+        .setTitle(result.won ? '🎉 CHIẾN THẮNG!' : '💀 THẤT BẠI!')
+        .setDescription(
+          `Trận đấu với **${boss.name}** đã kết thúc!\n\n` +
+          `*Chi tiết trận đấu đã được ghi lại trong thread (sẽ tự động ẩn sau 10 giây)*`
+        )
+      ],
+      components: []
+    });
+
+  } catch (error: any) {
+    if (error.message && error.message.includes('time')) {
+      await response.edit({ 
+        content: '⏰ Đã hết thời gian chọn Boss!', 
+        embeds: [], 
+        components: [] 
+      });
+    } else {
+      console.error('Lỗi trong boss command:', error);
+      await response.edit({ 
+        content: '❌ Có lỗi xảy ra khi thách đấu Boss!', 
+        embeds: [], 
+        components: [] 
+      });
+    }
+  }
 }
 
 async function handleInventory(message: Message) {
@@ -388,11 +706,11 @@ async function handleInventory(message: Message) {
     .setDescription(`💰 Vàng: **\`${character.gold}\`**`);
 
   if (items.rows.length === 0) {
-    embed.addFields({
+    embed.addFields([{
       name: '📦 Túi đồ',
       value: '*❌ Túi đồ trống!*',
       inline: false
-    });
+    }]);
     await message.reply({ embeds: [embed] });
     return;
   }
@@ -422,11 +740,11 @@ async function handleInventory(message: Message) {
       }
     });
     
-    embed.addFields({
+    embed.addFields([{
       name: `📦 ${typeName}`,
       value: itemText,
       inline: false
-    });
+    }]);
   }
 
   await message.reply({ embeds: [embed] });
@@ -483,11 +801,11 @@ async function handleSkills(message: Message) {
         learnedText += skillInfo + '\n';
       }
       
-      embed.addFields({
+      embed.addFields([{
         name: `✅ Đã học (${learnedSkills.length})`,
         value: learnedText || 'Không có',
         inline: false
-      });
+      }]);
     }
 
     // Kỹ năng chưa học - rút gọn hơn nữa
@@ -502,18 +820,18 @@ async function handleSkills(message: Message) {
         unlearnedText += '\n';
       }
       
-      embed.addFields({
+      embed.addFields([{
         name: `🔒 Chưa học (${unlearnedSkills.length})`,
         value: unlearnedText || 'Không có',
         inline: false
-      });
+      }]);
     }
   } else {
-    embed.addFields({
+    embed.addFields([{
       name: '📝 Kỹ năng',
       value: '*Chưa có kỹ năng! Hãy lên cấp để mở khóa.*',
       inline: false
-    });
+    }]);
   }
 
   await message.reply({ embeds: [embed] });

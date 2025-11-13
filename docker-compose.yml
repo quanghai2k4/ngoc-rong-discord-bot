@@ -31,6 +31,7 @@ services:
     environment:
       DATABASE_URL: postgresql://postgres:password@postgres:5432/ngoc_rong_db
       NODE_ENV: production
+      PGPASSWORD: password
     env_file:
       - .env
 

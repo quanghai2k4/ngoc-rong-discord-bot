@@ -75,6 +75,8 @@ export interface Monster {
   location: string;
   critical_chance: number;
   critical_damage: number;
+  is_boss: boolean;
+  is_super: boolean;
 }
 
 export interface Quest {

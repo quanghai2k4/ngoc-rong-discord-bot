@@ -1,11 +1,56 @@
 import { query } from '../database/db';
 import { Character, CharacterRace } from '../types';
 import { SkillService } from './SkillService';
+import { cacheService } from './CacheService';
+import { 
+  STARTING_HP, STARTING_KI, STARTING_ATTACK, STARTING_DEFENSE, 
+  HP_PER_LEVEL, KI_PER_LEVEL, ATTACK_PER_LEVEL, DEFENSE_PER_LEVEL, SPEED_PER_LEVEL,
+  BASE_EXP_PER_LEVEL, EXP_INCREASE_PER_LEVEL
+} from '../utils/constants';
+
+// Danh sách các vị trí trong thế giới Dragon Ball
+const NORMAL_LOCATIONS = [
+  'Sa Mạc',
+  'Căn Cứ RR',
+  'Cung Điện Piccolo',
+  'Hành Tinh Namek',
+  'Hành Tinh Vegeta',
+  'Trái Đất',
+  'Đền Thần',
+  'Phòng Thời Gian',
+  'Núi Paoz',
+  'Thành Phố Phía Tây',
+  'Vùng Đất Hoang',
+  'Kame House',
+];
+
+// Các khu vực đặc biệt chỉ có boss
+const BOSS_ONLY_LOCATIONS = [
+  'Rừng Karin',
+  'Tháp Karin',
+];
 
 export class CharacterService {
+  /**
+   * Lấy một vị trí ngẫu nhiên
+   */
+  static getRandomLocation(): string {
+    const allLocations = [...NORMAL_LOCATIONS, ...BOSS_ONLY_LOCATIONS];
+    return allLocations[Math.floor(Math.random() * allLocations.length)];
+  }
+
+  /**
+   * Kiểm tra xem vị trí có phải là khu vực chỉ có boss không
+   */
+  static isBossOnlyLocation(location: string): boolean {
+    return BOSS_ONLY_LOCATIONS.includes(location);
+  }
   static async findByPlayerId(playerId: number): Promise<Character | null> {
     const result = await query(
-      'SELECT * FROM characters WHERE player_id = $1',
+      `SELECT id, player_id, race_id, name, level, experience, hp, max_hp, ki, max_ki, 
+              attack, defense, speed, gold, location, created_at, critical_chance, 
+              critical_damage, dodge_chance 
+       FROM characters WHERE player_id = $1`,
       [playerId]
     );
     return result.rows[0] || null;
@@ -21,20 +66,14 @@ export class CharacterService {
       throw new Error('Race not found');
     }
 
-    const maxHp = 100 + race.hp_bonus;
-    const maxKi = 100 + race.ki_bonus;
-    const attack = 10 + race.attack_bonus;
-    const defense = 10 + race.defense_bonus;
+    const maxHp = STARTING_HP + race.hp_bonus;
+    const maxKi = STARTING_KI + race.ki_bonus;
+    const attack = STARTING_ATTACK + race.attack_bonus;
+    const defense = STARTING_DEFENSE + race.defense_bonus;
 
     // Xác định vị trí bắt đầu theo chủng tộc
-    let startingLocation = 'Trái Đất';
-    if (raceId === 1) {
-      startingLocation = 'Hành tinh Vegeta';
-    } else if (raceId === 2) {
-      startingLocation = 'Hành tinh Namek';
-    } else if (raceId === 3) {
-      startingLocation = 'Trái Đất';
-    }
+    // Tạm thời tất cả races đều bắt đầu ở Rừng Karin (có monsters level 1-3)
+    const startingLocation = 'Rừng Karin';
 
     const result = await query(
       `INSERT INTO characters 
@@ -53,16 +92,13 @@ export class CharacterService {
   }
 
   static async getAllRaces(): Promise<CharacterRace[]> {
-    const result = await query('SELECT * FROM character_races ORDER BY id');
-    return result.rows;
+    // Dùng cache thay vì query trực tiếp
+    return cacheService.getAllRaces();
   }
 
   static async getRaceById(raceId: number): Promise<CharacterRace | null> {
-    const result = await query(
-      'SELECT * FROM character_races WHERE id = $1',
-      [raceId]
-    );
-    return result.rows[0] || null;
+    // Dùng cache thay vì query trực tiếp
+    return cacheService.getRaceById(raceId);
   }
 
   static async updateStats(characterId: number, stats: Partial<Character>): Promise<void> {
@@ -77,61 +113,57 @@ export class CharacterService {
   }
 
   static async addExperience(characterId: number, exp: number): Promise<Character> {
-    const char = await query(
-      'SELECT * FROM characters WHERE id = $1',
+    // Lấy character hiện tại
+    const charResult = await query(
+      `SELECT id, level, experience, max_hp, max_ki, attack, defense, speed, hp, ki 
+       FROM characters WHERE id = $1`,
       [characterId]
     );
     
-    if (!char.rows[0]) {
+    if (!charResult.rows[0]) {
       throw new Error('Character not found');
     }
 
-    const character = char.rows[0];
+    const character = charResult.rows[0];
     let newExp = character.experience + exp;
     let newLevel = character.level;
+    let newMaxHp = character.max_hp;
+    let newMaxKi = character.max_ki;
+    let newAttack = character.attack;
+    let newDefense = character.defense;
+    let newSpeed = character.speed;
     
-    // Level up calculation (100 exp per level, increases by 50 each level)
-    const expNeeded = 100 + (newLevel - 1) * 50;
+    // Level up calculation
+    let expNeeded = BASE_EXP_PER_LEVEL + (newLevel - 1) * EXP_INCREASE_PER_LEVEL;
     
     while (newExp >= expNeeded) {
       newExp -= expNeeded;
       newLevel++;
       
       // Increase stats on level up
-      const newMaxHp = character.max_hp + 20;
-      const newMaxKi = character.max_ki + 20;
-      const newAttack = character.attack + 5;
-      const newDefense = character.defense + 5;
-      const newSpeed = character.speed + 3;
-
-      await query(
-        `UPDATE characters 
-         SET level = $1, experience = $2, max_hp = $3, hp = $3, 
-             max_ki = $4, ki = $4, attack = $5, defense = $6, speed = $7
-         WHERE id = $8`,
-        [newLevel, newExp, newMaxHp, newMaxKi, newAttack, newDefense, newSpeed, characterId]
-      );
-
-      character.level = newLevel;
-      character.max_hp = newMaxHp;
-      character.max_ki = newMaxKi;
-      character.attack = newAttack;
-      character.defense = newDefense;
-      character.speed = newSpeed;
+      newMaxHp += HP_PER_LEVEL;
+      newMaxKi += KI_PER_LEVEL;
+      newAttack += ATTACK_PER_LEVEL;
+      newDefense += DEFENSE_PER_LEVEL;
+      newSpeed += SPEED_PER_LEVEL;
+      
+      // Recalculate exp needed for next level
+      expNeeded = BASE_EXP_PER_LEVEL + (newLevel - 1) * EXP_INCREASE_PER_LEVEL;
     }
 
-    if (character.level === newLevel) {
-      await query(
-        'UPDATE characters SET experience = $1 WHERE id = $2',
-        [newExp, characterId]
-      );
-    }
-
-    const result = await query(
-      'SELECT * FROM characters WHERE id = $1',
-      [characterId]
+    // Single UPDATE query thay vì nhiều queries
+    const updateResult = await query(
+      `UPDATE characters 
+       SET level = $1, experience = $2, max_hp = $3, hp = GREATEST(hp, $3),
+           max_ki = $4, ki = GREATEST(ki, $4), attack = $5, defense = $6, speed = $7
+       WHERE id = $8
+       RETURNING id, player_id, race_id, name, level, experience, hp, max_hp, ki, max_ki,
+                 attack, defense, speed, gold, location, created_at, critical_chance,
+                 critical_damage, dodge_chance`,
+      [newLevel, newExp, newMaxHp, newMaxKi, newAttack, newDefense, newSpeed, characterId]
     );
-    return result.rows[0];
+
+    return updateResult.rows[0];
   }
 
   static async heal(characterId: number, hp: number, ki: number): Promise<void> {
@@ -141,6 +173,16 @@ export class CharacterService {
            ki = LEAST(ki + $2, max_ki) 
        WHERE id = $3`,
       [hp, ki, characterId]
+    );
+  }
+
+  /**
+   * Cập nhật vị trí của nhân vật
+   */
+  static async updateLocation(characterId: number, location: string): Promise<void> {
+    await query(
+      'UPDATE characters SET location = $1 WHERE id = $2',
+      [location, characterId]
     );
   }
 }

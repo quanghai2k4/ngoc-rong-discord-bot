@@ -2,17 +2,26 @@ import { query } from '../database/db';
 import { Monster } from '../types';
 
 export class MonsterService {
-  static async getByLocation(location: string): Promise<Monster[]> {
+  /**
+   * Lấy tất cả monsters phù hợp với level của nhân vật
+   */
+  static async getMonstersByLevelRange(characterLevel: number): Promise<Monster[]> {
     const result = await query(
-      'SELECT * FROM monsters WHERE location = $1 ORDER BY level',
-      [location]
+      `SELECT id, name, level, hp, attack, defense, speed, experience_reward, gold_reward,
+              min_level, max_level, is_boss, is_super, critical_chance, critical_damage
+       FROM monsters 
+       WHERE $1 BETWEEN min_level AND max_level 
+       ORDER BY level`,
+      [characterLevel]
     );
     return result.rows;
   }
 
   static async getById(monsterId: number): Promise<Monster | null> {
     const result = await query(
-      'SELECT * FROM monsters WHERE id = $1',
+      `SELECT id, name, level, hp, attack, defense, speed, experience_reward, gold_reward,
+              min_level, max_level, is_boss, is_super, critical_chance, critical_damage
+       FROM monsters WHERE id = $1`,
       [monsterId]
     );
     return result.rows[0] || null;
@@ -27,10 +36,28 @@ export class MonsterService {
   }
 
   /**
-   * Spawn 1-3 monsters cho battle
+   * Spawn 1-3 monsters cho battle dựa trên character level
    * Tỉ lệ: 70% (1 quái), 25% (2 quái), 5% (3 quái)
+   * Tối ưu: Lấy tất cả monsters phù hợp rồi random ở application layer thay vì ORDER BY RANDOM()
    */
-  static async spawnMonsters(minLevel: number, maxLevel: number): Promise<Monster[]> {
+  static async spawnMonsters(characterLevel: number, bossOnly: boolean = false): Promise<Monster[]> {
+    // Nếu là khu vực boss-only, chỉ spawn 1 boss
+    if (bossOnly) {
+      const result = await query(
+        `SELECT id, name, level, hp, attack, defense, speed, experience_reward, gold_reward,
+                min_level, max_level, is_boss, is_super, critical_chance, critical_damage
+         FROM monsters 
+         WHERE $1 BETWEEN min_level AND max_level AND is_boss = TRUE`,
+        [characterLevel]
+      );
+      
+      // Random ở application layer thay vì database
+      if (result.rows.length === 0) return [];
+      const randomBoss = result.rows[Math.floor(Math.random() * result.rows.length)];
+      return [randomBoss];
+    }
+
+    // Khu vực bình thường: spawn quái thường (không phải boss)
     const rand = Math.random() * 100;
     let count: number;
 
@@ -43,11 +70,23 @@ export class MonsterService {
     }
 
     const result = await query(
-      'SELECT * FROM monsters WHERE level BETWEEN $1 AND $2 ORDER BY RANDOM() LIMIT $3',
-      [minLevel, maxLevel, count]
+      `SELECT id, name, level, hp, attack, defense, speed, experience_reward, gold_reward,
+              min_level, max_level, is_boss, is_super, critical_chance, critical_damage
+       FROM monsters 
+       WHERE $1 BETWEEN min_level AND max_level AND is_boss = FALSE`,
+      [characterLevel]
     );
 
-    return result.rows;
+    // Random ở application layer - hiệu quả hơn ORDER BY RANDOM()
+    const monsters = result.rows;
+    const spawned: Monster[] = [];
+    
+    for (let i = 0; i < Math.min(count, monsters.length); i++) {
+      const randomIndex = Math.floor(Math.random() * monsters.length);
+      spawned.push(monsters[randomIndex]);
+    }
+
+    return spawned;
   }
 
   static async getDrops(monsterId: number): Promise<any[]> {

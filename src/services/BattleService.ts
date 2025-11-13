@@ -27,6 +27,7 @@ export interface BattleRound {
   round: number;
   characterAction: string;
   monsterActions: string[];
+  actions: string[]; // Thứ tự actions thực tế theo turn order
   characterHp: number;
   monsterStates: { name: string; hp: number; maxHp: number }[];
   characterKi: number;
@@ -86,6 +87,7 @@ export class BattleService {
       const turnOrder = this.calculateTurnOrder(character, monsterInstances);
       
       const monsterActions: string[] = [];
+      const actions: string[] = []; // Track actions theo thứ tự thực tế
       let characterAction: CombatAction | null = null;
 
       // Thực hiện các actions theo turn order
@@ -100,6 +102,7 @@ export class BattleService {
               isStunned: true,
               text: '💤 *Bạn bị choáng! Không thể hành động*'
             };
+            actions.push(characterAction.text);
           } else {
             const aliveMonsters = monsterInstances.filter(m => m.isAlive);
             if (aliveMonsters.length === 0) break;
@@ -111,6 +114,7 @@ export class BattleService {
               charKi
             );
 
+            actions.push(characterAction.text);
             charKi = Math.max(0, charKi - (characterAction.skill?.ki_cost || 0));
 
             // Áp dụng damage
@@ -150,7 +154,9 @@ export class BattleService {
           if (!monsterInst.isAlive) continue;
 
           if (monsterInst.stunned) {
-            monsterActions.push(`💤 **${monsterInst.monster.name}** bị choáng! Không thể tấn công`);
+            const stunnedText = `💤 **${monsterInst.monster.name}** bị choáng! Không thể tấn công`;
+            monsterActions.push(stunnedText);
+            actions.push(stunnedText);
           } else {
             const monsterSkills = monsterSkillsMap.get(monsterInst.monster.id) || [];
             const monsterAction = await this.performMonsterAction(
@@ -167,6 +173,7 @@ export class BattleService {
             }
 
             monsterActions.push(monsterAction.text);
+            actions.push(monsterAction.text);
           }
         }
 
@@ -178,11 +185,15 @@ export class BattleService {
       // Regen KI mỗi turn
       charKi = Math.min(character.max_ki, charKi + 10);
 
+      // Debug: log actions array
+      console.log(`Round ${roundNumber} - actions:`, actions);
+
       // Lưu round
       rounds.push({
         round: roundNumber,
         characterAction: characterAction?.text || '',
         monsterActions,
+        actions, // Thứ tự actions thực tế theo turn order
         characterHp: Math.max(0, charHp),
         monsterStates: monsterInstances.map(m => ({
           name: m.monster.name,
@@ -324,7 +335,7 @@ export class BattleService {
 
     // Chọn target để tính dodge (monsters không có dodge)
     const isDodged = false;
-    const primaryTarget = aliveMonsters[0];
+    const primaryTarget = aliveMonsters.sort((a, b) => a.currentHp - b.currentHp)[0];
 
     if (isDodged) {
       return {
@@ -359,9 +370,26 @@ export class BattleService {
     const variance = Math.random() * 0.2 + 0.9;
     const finalDamage = Math.max(1, Math.floor(baseDamage * variance));
 
+    // Kiểm tra xem có quái nào chết không
+    const targetsHit = selectedSkill?.is_aoe ? aliveMonsters.length : 1;
+    let monstersKilled: string[] = [];
+
+    if (selectedSkill?.is_aoe) {
+      // AoE: check tất cả quái
+      for (const monsterInst of aliveMonsters) {
+        if (monsterInst.currentHp - finalDamage <= 0) {
+          monstersKilled.push(monsterInst.monster.name);
+        }
+      }
+    } else {
+      // Single target: check primary target
+      if (primaryTarget.currentHp - finalDamage <= 0) {
+        monstersKilled.push(primaryTarget.monster.name);
+      }
+    }
+
     // Build text
     let text: string;
-    const targetsHit = selectedSkill?.is_aoe ? aliveMonsters.length : 1;
 
     if (selectedSkill) {
       const critText = isCritical ? ' 💥 **CHÍ MẠNG!**' : '';
@@ -369,17 +397,29 @@ export class BattleService {
       const skillEmoji = selectedSkill.description ? selectedSkill.description.split(' ')[0] : '⚡';
       
       if (selectedSkill.is_aoe && aliveMonsters.length > 1) {
-        text = `${skillEmoji} Bạn tung **${selectedSkill.name}** đánh **${targetsHit} quái**! Mỗi quái nhận **\`${finalDamage}\`** sát thương!${critText}${stunText}`;
+        if (monstersKilled.length > 0) {
+          text = `${skillEmoji} Bạn tung **${selectedSkill.name}** đánh **${targetsHit} quái**! Kết liễu **${monstersKilled.join(', ')}**!${critText}${stunText}`;
+        } else {
+          text = `${skillEmoji} Bạn tung **${selectedSkill.name}** đánh **${targetsHit} quái**! Mỗi quái nhận **\`${finalDamage}\`** sát thương!${critText}${stunText}`;
+        }
       } else {
         const actionVerbs = ['tung ra', 'phóng', 'khai hỏa', 'giải phóng', 'bùng nổ'];
         const verb = actionVerbs[Math.floor(Math.random() * actionVerbs.length)];
-        text = `${skillEmoji} Bạn ${verb} **${selectedSkill.name}**! Gây **\`${finalDamage}\`** sát thương!${critText}${stunText}`;
+        if (monstersKilled.length > 0) {
+          text = `${skillEmoji} Bạn ${verb} **${selectedSkill.name}**! Kết liễu **${monstersKilled[0]}**!${critText}${stunText}`;
+        } else {
+          text = `${skillEmoji} Bạn ${verb} **${selectedSkill.name}**! Gây **\`${finalDamage}\`** sát thương!${critText}${stunText}`;
+        }
       }
     } else {
       const critText = isCritical ? ' 💥 **CHÍ MẠNG!**' : '';
       const attackTypes = ['⚔️ đánh thẳng', '👊 ra đòn', '🥊 tung đấm', '🦶 đá mạnh'];
       const attackType = attackTypes[Math.floor(Math.random() * attackTypes.length)];
-      text = `${attackType} vào **${primaryTarget.monster.name}** gây **\`${finalDamage}\`** sát thương!${critText}`;
+      if (monstersKilled.length > 0) {
+        text = `${attackType} vào **${primaryTarget.monster.name}**! Kết liễu!${critText}`;
+      } else {
+        text = `${attackType} vào **${primaryTarget.monster.name}** gây **\`${finalDamage}\`** sát thương!${critText}`;
+      }
     }
 
     return {
