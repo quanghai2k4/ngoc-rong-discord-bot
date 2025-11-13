@@ -291,8 +291,8 @@ export class BattleService {
       const usableSkills = skills.filter(s => s.ki_cost <= currentKi);
 
       if (usableSkills.length > 0) {
-        // 40% chance dùng skill nếu có
-        if (Math.random() < 0.4) {
+        // 65% chance dùng skill nếu có
+        if (Math.random() < 0.65) {
           // Ưu tiên skills mạnh hơn
           selectedSkill = usableSkills.sort((a, b) => b.damage_multiplier - a.damage_multiplier)[0];
         }

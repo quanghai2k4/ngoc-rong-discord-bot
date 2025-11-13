@@ -501,12 +501,12 @@ async function handleHelp(message: Message) {
         name: '💡 Mẹo hữu ích',
         value: 
           '```\n' +
-          '• Skills tự động sử dụng trong combat\n' +
-          '• KI tự động hồi phục mỗi lượt (+10)\n' +
-          '• Có cơ hội critical, dodge và stun\n' +
-          '• Level up hồi đầy HP/KI ngay lập tức\n' +
-          '• Thua trận mất 10% vàng và HP về 1\n' +
-          '• Săn quái có cơ hội nhận vật phẩm\n' +
+          '• KI tự động hồi +10 mỗi lượt\n' +
+          '• HP/KI hồi đầy sau mỗi trận (thắng/thua)\n' +
+          '• Thua trận chỉ mất 10% vàng (không mất HP)\n' +
+          '• Level up tăng +20 HP/KI, +5 ATK/DEF, +3 SPD\n' +
+          '• Skills có 65% tỉ lệ kích hoạt nếu đủ KI\n' +
+          '• Săn quái có cơ hội nhận vật phẩm rơi\n' +
           '```',
         inline: false
       },

@@ -26,12 +26,22 @@ export class CharacterService {
     const attack = 10 + race.attack_bonus;
     const defense = 10 + race.defense_bonus;
 
+    // Xác định vị trí bắt đầu theo chủng tộc
+    let startingLocation = 'Trái Đất';
+    if (raceId === 1) {
+      startingLocation = 'Hành tinh Vegeta';
+    } else if (raceId === 2) {
+      startingLocation = 'Hành tinh Namek';
+    } else if (raceId === 3) {
+      startingLocation = 'Trái Đất';
+    }
+
     const result = await query(
       `INSERT INTO characters 
-       (player_id, race_id, name, max_hp, hp, max_ki, ki, attack, defense) 
-       VALUES ($1, $2, $3, $4, $4, $5, $5, $6, $7) 
+       (player_id, race_id, name, max_hp, hp, max_ki, ki, attack, defense, location) 
+       VALUES ($1, $2, $3, $4, $4, $5, $5, $6, $7, $8) 
        RETURNING *`,
-      [playerId, raceId, name, maxHp, maxKi, attack, defense]
+      [playerId, raceId, name, maxHp, maxKi, attack, defense, startingLocation]
     );
     
     const character = result.rows[0];
