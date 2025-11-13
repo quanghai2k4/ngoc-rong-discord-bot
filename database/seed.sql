@@ -92,7 +92,7 @@ INSERT INTO skills (name, description, skill_type, race_id, required_level, ki_c
 -- These will be handled in CharacterService when creating character
 
 -- Assign skills to monsters
--- Monsters at each location will have appropriate skills
+-- Monsters chỉ sử dụng skills cơ bản/universal, không dùng skills đặc trưng của race
 INSERT INTO monster_skills (monster_id, skill_id, use_probability) VALUES
 -- Rừng Karin monsters (basic skills)
 (1, 13, 20.0),  -- Sói Hoang uses Ki Blast (20%)
@@ -100,17 +100,12 @@ INSERT INTO monster_skills (monster_id, skill_id, use_probability) VALUES
 
 -- Sa Mạc (intermediate)
 (3, 13, 40.0),  -- Tên Cướp uses Ki Blast (40%)
-(3, 12, 25.0),  -- Tên Cướp uses Wolf Fang Fist (25%)
 
--- Căn Cứ RR (advanced)
-(4, 1, 35.0),   -- Quân RR uses Kamehameha (35%)
-(4, 10, 30.0),  -- Quân RR uses Solar Flare (30%)
+-- Căn Cứ RR (advanced) 
+(4, 13, 50.0),  -- Quân RR uses Ki Blast (50%)
 
 -- Cung Điện Piccolo (strong)
-(5, 6, 40.0),   -- Quỷ Nhỏ uses Masenko (40%)
-(5, 1, 35.0),   -- Quỷ Nhỏ uses Kamehameha (35%)
+(5, 13, 55.0),  -- Quỷ Nhỏ uses Ki Blast (55%)
 
 -- Hành Tinh Namek (very strong)
-(6, 2, 40.0),   -- Frieza Lính uses Galick Gun (40%)
-(6, 1, 45.0),   -- Frieza Lính uses Kamehameha (45%)
-(6, 9, 30.0);   -- Frieza Lính uses Kienzan (30%)
+(6, 13, 60.0);  -- Frieza Lính uses Ki Blast (60%)
