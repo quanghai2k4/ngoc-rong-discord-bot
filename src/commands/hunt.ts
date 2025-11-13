@@ -99,14 +99,6 @@ export const huntCommand: Command = {
           inline: false
         });
 
-        if (result.leveledUp) {
-          resultEmbed.addFields({
-            name: '🎉 Level Up!',
-            value: `Bạn đã lên Level **\`${result.newLevel}\`**`,
-            inline: false
-          });
-        }
-
         if (result.itemsDropped.length > 0) {
           let itemsList = '';
           for (const item of result.itemsDropped) {
@@ -121,12 +113,29 @@ export const huntCommand: Command = {
       } else {
         resultEmbed.addFields({
           name: '💔 Hậu quả',
-          value: '*Bạn mất 10% vàng và HP còn 1*',
+          value: '*Bạn mất 10% vàng*',
           inline: false
         });
       }
 
       await interaction.followUp({ embeds: [resultEmbed] });
+
+      // Gửi tin nhắn level up riêng nếu có
+      if (result.won && result.leveledUp) {
+        const levelUpEmbed = new EmbedBuilder()
+          .setColor('#FFD700')
+          .setTitle('✨ LEVEL UP! ✨')
+          .setDescription(`🎊 Chúc mừng! Bạn đã lên **Level \`${result.newLevel}\`**!`)
+          .addFields({
+            name: '📈 Tăng chỉ số',
+            value: '```diff\n+ HP & KI: +20\n+ ATK & DEF: +5\n+ SPD: +3\n```',
+            inline: false
+          })
+          .setFooter({ text: 'HP và KI đã được hồi phục đầy!' })
+          .setTimestamp();
+
+        await interaction.followUp({ embeds: [levelUpEmbed] });
+      }
     }, 2000);
   },
 };

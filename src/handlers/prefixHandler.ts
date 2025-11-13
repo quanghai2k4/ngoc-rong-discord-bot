@@ -284,14 +284,6 @@ async function handleHunt(message: Message) {
         inline: false
       });
 
-      if (result.leveledUp) {
-        resultEmbed.addFields({
-          name: '🎉 Level Up!',
-          value: `Bạn đã lên Level **\`${result.newLevel}\`**`,
-          inline: false
-        });
-      }
-
       if (result.itemsDropped.length > 0) {
         let itemsList = '';
         for (const item of result.itemsDropped) {
@@ -312,6 +304,32 @@ async function handleHunt(message: Message) {
     }
 
     await message.reply({ embeds: [resultEmbed] });
+
+    // Gửi level up notification riêng biệt
+    if (result.won && result.leveledUp) {
+      const levelUpEmbed = new EmbedBuilder()
+        .setColor('#FFD700')
+        .setTitle('✨ LEVEL UP! ✨')
+        .setDescription(`Chúc mừng! Bạn đã lên **Level ${result.newLevel}**!`)
+        .addFields(
+          {
+            name: '📊 Chỉ số tăng',
+            value: 
+              '```diff\n' +
+              '+ HP: +20 (Max HP tăng)\n' +
+              '+ KI: +20 (Max KI tăng)\n' +
+              '+ Attack: +5\n' +
+              '+ Defense: +5\n' +
+              '+ Speed: +3\n' +
+              '```',
+            inline: false
+          }
+        )
+        .setFooter({ text: '💚 HP và KI đã được hồi phục đầy!' })
+        .setTimestamp();
+
+      await message.reply({ embeds: [levelUpEmbed] });
+    }
   }, 2000);
 }
 
