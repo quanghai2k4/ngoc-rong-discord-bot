@@ -4,7 +4,7 @@
 INSERT INTO character_races (name, description, hp_bonus, ki_bonus, attack_bonus, defense_bonus) VALUES
 ('Saiyan', 'Chiến binh mạnh mẽ từ hành tinh Vegeta', 50, 30, 15, 10),
 ('Namek', 'Người Namek với khả năng hồi phục tuyệt vời', 30, 50, 10, 15),
-('Earthling', 'Người Trái Đất thông minh và linh hoạt', 40, 40, 12, 12);
+('Trái đất', 'Người Trái Đất thông minh và linh hoạt', 40, 40, 12, 12);
 
 -- Insert item types
 INSERT INTO item_types (name, description) VALUES

@@ -40,18 +40,18 @@ export const huntCommand: Command = {
       return;
     }
 
-    const embed = new EmbedBuilder()
-      .setColor(0xFF4500)
+    const startEmbed = new EmbedBuilder()
+      .setColor('#FF0000')
       .setTitle('⚔️ Bắt đầu chiến đấu!')
       .setDescription(`Bạn gặp **${monster.name}** (Level **\`${monster.level}\`**)`)
-      .addFields(
-        { name: '❤️ HP', value: `**\`${monster.hp}\`**`, inline: true },
-        { name: '⚔️ ATK', value: `**\`${monster.attack}\`**`, inline: true },
-        { name: '🛡️ DEF', value: `**\`${monster.defense}\`**`, inline: true }
-      )
+      .addFields({
+        name: '📊 Thông tin quái vật',
+        value: `❤️ HP: **\`${monster.hp}\`** • ⚔️ ATK: **\`${monster.attack}\`** • 🛡️ DEF: **\`${monster.defense}\`**`,
+        inline: false
+      })
       .setFooter({ text: '⏳ Đang chiến đấu...' });
 
-    await interaction.editReply({ embeds: [embed] });
+    await interaction.editReply({ embeds: [startEmbed] });
 
     // Simulate battle
     setTimeout(async () => {
@@ -83,36 +83,47 @@ export const huntCommand: Command = {
       }
 
       const resultEmbed = new EmbedBuilder()
-        .setColor(result.won ? 0x00FF00 : 0xFF0000)
+        .setColor(result.won ? '#00FF00' : '#FF0000')
         .setTitle(result.won ? '🎉 CHIẾN THẮNG!' : '💀 THẤT BẠI!')
-        .setDescription(battleLog.substring(0, 4000) || '*Không có nhật ký chiến đấu.*')
-        .addFields(
-          { name: '⚔️ Số hiệp', value: `**\`${result.rounds.length}\`**`, inline: true }
-        )
-        .setTimestamp();
+        .addFields({
+          name: '⚔️ Diễn biến trận đấu',
+          value: battleLog,
+          inline: false
+        })
+        .setFooter({ text: `Số hiệp: ${result.rounds.length}` });
 
       if (result.won) {
-        resultEmbed.addFields(
-          { name: '🎯 EXP', value: `**\`+${result.expGained}\`**`, inline: true },
-          { name: '💰 Vàng', value: `**\`+${result.goldGained}\`**`, inline: true }
-        );
+        resultEmbed.addFields({
+          name: '🎁 Phần thưởng',
+          value: `🎯 EXP: **\`+${result.expGained}\`** • 💰 Vàng: **\`+${result.goldGained}\`**`,
+          inline: false
+        });
 
         if (result.leveledUp) {
-          resultEmbed.addFields(
-            { name: '🎉 Level Up!', value: `**\`${result.newLevel}\`**`, inline: false }
-          );
+          resultEmbed.addFields({
+            name: '🎉 Level Up!',
+            value: `Bạn đã lên Level **\`${result.newLevel}\`**`,
+            inline: false
+          });
         }
 
         if (result.itemsDropped.length > 0) {
-          const itemsList = result.itemsDropped.map(item => `• **${item.name}**`).join('\n');
-          resultEmbed.addFields(
-            { name: '📦 Vật phẩm rơi', value: itemsList, inline: false }
-          );
+          let itemsList = '';
+          for (const item of result.itemsDropped) {
+            itemsList += `• **${item.name}**\n`;
+          }
+          resultEmbed.addFields({
+            name: '📦 Vật phẩm rơi',
+            value: itemsList,
+            inline: false
+          });
         }
       } else {
-        resultEmbed.addFields(
-          { name: '💔 Hậu quả', value: '*Bạn mất 10% vàng và HP còn 1*', inline: false }
-        );
+        resultEmbed.addFields({
+          name: '💔 Hậu quả',
+          value: '*Bạn mất 10% vàng và HP còn 1*',
+          inline: false
+        });
       }
 
       await interaction.followUp({ embeds: [resultEmbed] });

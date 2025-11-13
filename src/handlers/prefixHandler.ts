@@ -9,7 +9,7 @@ import { query } from '../database/db';
 export async function handlePrefixCommand(
   message: Message,
   commandName: string,
-  args: string[]
+  _args: string[]
 ) {
   switch (commandName) {
     case 'start':
@@ -70,10 +70,10 @@ async function handleStart(message: Message) {
 
   const races = await CharacterService.getAllRaces();
 
-  const embed = new EmbedBuilder()
-    .setColor(0xFFD700)
+  const startEmbed = new EmbedBuilder()
+    .setColor('#0099ff')
     .setTitle('🐉 Chào mừng đến với thế giới Ngọc Rồng!')
-    .setDescription('**Chọn chủng tộc của bạn:**\n\nTrả lời bằng số **1**, **2**, hoặc **3** để chọn chủng tộc!')
+    .setDescription('**Chọn chủng tộc của bạn:**')
     .addFields(
       races.map((race, index) => ({
         name: `${index + 1}. ${race.name}`,
@@ -81,9 +81,9 @@ async function handleStart(message: Message) {
         inline: false
       }))
     )
-    .setTimestamp();
+    .setFooter({ text: 'Trả lời bằng số 1, 2, hoặc 3 để chọn chủng tộc!' });
 
-  const initialMsg = await message.reply({ embeds: [embed] });
+  await message.reply({ embeds: [startEmbed] });
 
   const filter = (m: Message) => {
     return m.author.id === message.author.id && ['1', '2', '3'].includes(m.content);
@@ -113,23 +113,26 @@ async function handleStart(message: Message) {
       return;
     }
 
-    const defaultName = `${selectedRace.name}_${message.author.username.substring(0, 10)}`;
+    const defaultName = message.author.username;
     const character = await CharacterService.create(player.id, defaultName, selectedRace.id);
 
     const successEmbed = new EmbedBuilder()
-      .setColor(0x00FF00)
-      .setTitle('✅ Tạo nhân vật thành công!')
+      .setColor('#00FF00')
+      .setTitle('🎉 Tạo nhân vật thành công!')
       .setDescription(`**${character.name}** (${selectedRace.name})`)
       .addFields(
-        { name: '❤️ HP', value: `**\`${character.max_hp}\`**`, inline: true },
-        { name: '💙 KI', value: `**\`${character.max_ki}\`**`, inline: true },
-        { name: '⚡ Speed', value: `**\`${character.speed}\`**`, inline: true },
-        { name: '⚔️ Attack', value: `**\`${character.attack}\`**`, inline: true },
-        { name: '🛡️ Defense', value: `**\`${character.defense}\`**`, inline: true },
-        { name: '\u200B', value: '\u200B', inline: true }
+        {
+          name: '📊 Chỉ số ban đầu',
+          value: `❤️ HP: **\`${character.max_hp}\`** • 💙 KI: **\`${character.max_ki}\`** • ⚡ Speed: **\`${character.speed}\`**\n⚔️ Attack: **\`${character.attack}\`** • 🛡️ Defense: **\`${character.defense}\`**`,
+          inline: false
+        },
+        {
+          name: '📍 Vị trí',
+          value: `**${character.location}**`,
+          inline: false
+        }
       )
-      .setFooter({ text: 'Sử dụng zprofile để xem thông tin chi tiết!' })
-      .setTimestamp();
+      .setFooter({ text: 'Sử dụng zprofile để xem thông tin chi tiết!' });
 
     await message.reply({ embeds: [successEmbed] });
 
@@ -167,39 +170,31 @@ async function handleProfile(message: Message) {
   const expBar = '█'.repeat(expPercentage) + '░'.repeat(10 - expPercentage);
 
   const embed = new EmbedBuilder()
-    .setColor(0x00FF00)
+    .setColor('#0099ff')
     .setTitle(`⚔️ ${character.name}`)
-    .setDescription(
-      `**${race?.name}** • Level **${character.level}** • 💰 **${character.gold}** vàng\n` +
-      `╰─ 📍 ${character.location}`
-    )
+    .setDescription(`**${race?.name}** • Level **${character.level}** • 💰 **${character.gold}** vàng\n╰─ 📍 ${character.location}`)
     .addFields(
-      {
-        name: '❤️ HP',
+      { 
+        name: '❤️ HP', 
         value: `\`${character.hp}\`/\`${character.max_hp}\` ${hpBar}`,
-        inline: false
+        inline: false 
       },
-      {
-        name: '💙 KI',
+      { 
+        name: '💙 KI', 
         value: `\`${character.ki}\`/\`${character.max_ki}\` ${kiBar}`,
-        inline: false
+        inline: false 
       },
-      {
-        name: '✨ EXP',
+      { 
+        name: '✨ EXP', 
         value: `\`${character.experience}\`/\`${expNeeded}\` ${expBar}`,
-        inline: false
+        inline: false 
       },
       {
         name: '⚔️ Combat Stats',
-        value: 
-          `╭─ ⚔️ ATK: **${character.attack}** • 🛡️ DEF: **${character.defense}**\n` +
-          `├─ ⚡ SPD: **${character.speed}**\n` +
-          `├─ 💥 Crit: **${character.critical_chance}%** (x**${character.critical_damage}**)\n` +
-          `╰─ 💨 Dodge: **${character.dodge_chance}%**`,
+        value: `╭─ ⚔️ ATK: **${character.attack}** • 🛡️ DEF: **${character.defense}**\n├─ ⚡ SPD: **${character.speed}**\n├─ 💥 Crit: **${character.critical_chance}%** (x**${character.critical_damage}**)\n╰─ 💨 Dodge: **${character.dodge_chance}%**`,
         inline: false
       }
     )
-    .setTimestamp()
     .setFooter({ text: `ID: ${character.id}` });
 
   await message.reply({ embeds: [embed] });
@@ -232,18 +227,18 @@ async function handleHunt(message: Message) {
     return;
   }
 
-  const battleStartEmbed = new EmbedBuilder()
-    .setColor(0xFF4500)
+  const startEmbed = new EmbedBuilder()
+    .setColor('#FF0000')
     .setTitle('⚔️ Bắt đầu chiến đấu!')
     .setDescription(`Bạn gặp **${monster.name}** (Level **\`${monster.level}\`**)`)
-    .addFields(
-      { name: '❤️ HP', value: `**\`${monster.hp}\`**`, inline: true },
-      { name: '⚔️ ATK', value: `**\`${monster.attack}\`**`, inline: true },
-      { name: '🛡️ DEF', value: `**\`${monster.defense}\`**`, inline: true }
-    )
+    .addFields({
+      name: '📊 Thông tin quái vật',
+      value: `❤️ HP: **\`${monster.hp}\`** • ⚔️ ATK: **\`${monster.attack}\`** • 🛡️ DEF: **\`${monster.defense}\`**`,
+      inline: false
+    })
     .setFooter({ text: '⏳ Đang chiến đấu...' });
 
-  const battleMsg = await message.reply({ embeds: [battleStartEmbed] });
+  await message.reply({ embeds: [startEmbed] });
 
   setTimeout(async () => {
     const result = await BattleService.battle(character, monster);
@@ -273,32 +268,48 @@ async function handleHunt(message: Message) {
     }
 
     const resultEmbed = new EmbedBuilder()
-      .setColor(result.won ? 0x00FF00 : 0xFF0000)
+      .setColor(result.won ? '#00FF00' : '#FF0000')
       .setTitle(result.won ? '🎉 CHIẾN THẮNG!' : '💀 THẤT BẠI!')
-      .setDescription(battleLog || '*Không có nhật ký chiến đấu.*')
-      .addFields({ name: '⚔️ Số hiệp', value: `**\`${result.rounds.length}\`**`, inline: true });
+      .addFields({
+        name: '⚔️ Diễn biến trận đấu',
+        value: battleLog,
+        inline: false
+      })
+      .setFooter({ text: `Số hiệp: ${result.rounds.length}` });
 
     if (result.won) {
-      resultEmbed.addFields(
-        { name: '✨ EXP', value: `**\`+${result.expGained}\`**`, inline: true },
-        { name: '💰 Vàng', value: `**\`+${result.goldGained}\`**`, inline: true }
-      );
+      resultEmbed.addFields({
+        name: '🎁 Phần thưởng',
+        value: `🎯 EXP: **\`+${result.expGained}\`** • 💰 Vàng: **\`+${result.goldGained}\`**`,
+        inline: false
+      });
 
       if (result.leveledUp) {
-        resultEmbed.addFields(
-          { name: '🎉 Level Up!', value: `**\`${result.newLevel}\`**`, inline: false }
-        );
+        resultEmbed.addFields({
+          name: '🎉 Level Up!',
+          value: `Bạn đã lên Level **\`${result.newLevel}\`**`,
+          inline: false
+        });
       }
 
       if (result.itemsDropped.length > 0) {
-        const itemsList = result.itemsDropped.map(item => `• **${item.name}**`).join('\n');
-        resultEmbed.addFields({ name: '🎁 Vật phẩm rơi', value: itemsList, inline: false });
+        let itemsList = '';
+        for (const item of result.itemsDropped) {
+          itemsList += `• **${item.name}**\n`;
+        }
+        resultEmbed.addFields({
+          name: '📦 Vật phẩm rơi',
+          value: itemsList,
+          inline: false
+        });
       }
     } else {
-      resultEmbed.addFields({ name: '💔 Hậu quả', value: '*Bạn mất 10% vàng và HP còn 1*', inline: false });
+      resultEmbed.addFields({
+        name: '💔 Hậu quả',
+        value: '*Bạn mất 10% vàng và HP còn 1*',
+        inline: false
+      });
     }
-
-    resultEmbed.setTimestamp();
 
     await message.reply({ embeds: [resultEmbed] });
   }, 2000);
@@ -327,15 +338,18 @@ async function handleInventory(message: Message) {
     [character.id]
   );
 
-  if (items.rows.length === 0) {
-    const emptyEmbed = new EmbedBuilder()
-      .setColor(0x808080)
-      .setTitle(`🎒 Túi đồ của ${character.name}`)
-      .addFields({ name: '💰 Vàng', value: `**\`${character.gold}\`**`, inline: false })
-      .setDescription('*❌ Túi đồ trống!*')
-      .setTimestamp();
+  const embed = new EmbedBuilder()
+    .setColor('#00FF00')
+    .setTitle(`🎒 Túi đồ của ${character.name}`)
+    .setDescription(`💰 Vàng: **\`${character.gold}\`**`);
 
-    await message.reply({ embeds: [emptyEmbed] });
+  if (items.rows.length === 0) {
+    embed.addFields({
+      name: '📦 Túi đồ',
+      value: '*❌ Túi đồ trống!*',
+      inline: false
+    });
+    await message.reply({ embeds: [embed] });
     return;
   }
 
@@ -347,17 +361,12 @@ async function handleInventory(message: Message) {
     return acc;
   }, {});
 
-  const inventoryEmbed = new EmbedBuilder()
-    .setColor(0x9370DB)
-    .setTitle(`🎒 Túi đồ của ${character.name}`)
-    .addFields({ name: '💰 Vàng', value: `**\`${character.gold}\`**`, inline: false });
-
   for (const [typeName, typeItems] of Object.entries(itemsByType)) {
-    let itemsText = '';
+    let itemText = '';
     (typeItems as any[]).forEach((item, idx, arr) => {
       const isLast = idx === arr.length - 1;
       const prefix = isLast ? '╰─' : '├─';
-      let info = `${prefix} ${item.equipped ? '✅' : '⬜'} **${item.name}** x\`${item.quantity}\``;
+      itemText += `${prefix} ${item.equipped ? '✅' : '⬜'} **${item.name}** x\`${item.quantity}\`\n`;
       const stats = [];
       if (item.hp_bonus > 0) stats.push(`❤️ +${item.hp_bonus}`);
       if (item.ki_bonus > 0) stats.push(`💙 +${item.ki_bonus}`);
@@ -365,16 +374,18 @@ async function handleInventory(message: Message) {
       if (item.defense_bonus > 0) stats.push(`🛡️ +${item.defense_bonus}`);
       if (item.speed_bonus > 0) stats.push(`⚡ +${item.speed_bonus}`);
       if (stats.length > 0) {
-        info += `\n   ${stats.join(' • ')}`;
+        itemText += `   ${stats.join(' • ')}\n`;
       }
-      itemsText += `${info}\n`;
     });
-    inventoryEmbed.addFields({ name: `📦 ${typeName}`, value: itemsText, inline: false });
+    
+    embed.addFields({
+      name: `📦 ${typeName}`,
+      value: itemText,
+      inline: false
+    });
   }
 
-  inventoryEmbed.setTimestamp();
-
-  await message.reply({ embeds: [inventoryEmbed] });
+  await message.reply({ embeds: [embed] });
 }
 
 async function handleSkills(message: Message) {
@@ -398,135 +409,122 @@ async function handleSkills(message: Message) {
   const kiBar = '█'.repeat(kiPercentage) + '░'.repeat(10 - kiPercentage);
 
   const embed = new EmbedBuilder()
-    .setColor(0x9B59B6)
+    .setColor('#FFD700')
     .setTitle(`⚡ Kỹ năng ${race?.name}`)
-    .setDescription(
-      `**${character.name}** • Level **${character.level}**\n` +
-      `╰─ 💙 KI: \`${character.ki}\`/\`${character.max_ki}\` ${kiBar}`
-    )
-    .setTimestamp();
+    .setDescription(`**${character.name}** • Level **${character.level}**\n💙 KI: \`${character.ki}\`/\`${character.max_ki}\` ${kiBar}`)
+    .setFooter({ text: 'Skills sẽ tự động sử dụng trong combat!' });
 
   if (allSkills.length > 0) {
     const learnedSkills = allSkills.filter(s => s.learned);
     const unlearnedSkills = allSkills.filter(s => !s.learned);
 
-    // Phần 1: Kỹ năng đã học
+    // Kỹ năng đã học - rút gọn
     if (learnedSkills.length > 0) {
       let learnedText = '';
       for (const skill of learnedSkills) {
         const canUse = character.level >= skill.required_level;
-        learnedText += `${canUse ? '✅' : '🔒'} **${skill.name}** [Lv.${skill.required_level}] - KI: ${skill.ki_cost}\n`;
+        const icon = canUse ? '✅' : '🔒';
         
-        if (skill.skill_type === 'attack') {
-          const stats = [];
-          stats.push(`💥${Math.round(skill.damage_multiplier * 100)}%`);
-          if (skill.defense_break > 0) stats.push(`🛡️${Math.round(skill.defense_break * 100)}%`);
-          if (skill.crit_bonus > 0) stats.push(`⚡${skill.crit_bonus}%`);
-          if (skill.stun_chance > 0) stats.push(`💫${skill.stun_chance}%`);
-          learnedText += `  ${stats.join(' • ')}\n`;
+        // Rút gọn: chỉ hiển thị tên, level, KI cost và damage multiplier (nếu có)
+        let skillInfo = `${icon} **${skill.name}** Lv.\`${skill.required_level}\` • KI:\`${skill.ki_cost}\``;
+        
+        if (skill.skill_type === 'attack' && skill.damage_multiplier) {
+          skillInfo += ` • 💥\`${Math.round(skill.damage_multiplier * 100)}%\``;
         } else if (skill.skill_type === 'heal') {
-          learnedText += `  💚 Hồi: ${skill.heal_amount} HP\n`;
+          skillInfo += ` • 💚\`${skill.heal_amount}\``;
         } else if (skill.skill_type === 'buff') {
-          learnedText += `  ⭐ Buff: Tăng DMG & Crit\n`;
+          skillInfo += ` • ⭐Buff`;
         }
+        
+        learnedText += skillInfo + '\n';
       }
       
       embed.addFields({
-        name: `✅ Kỹ năng đã học (${learnedSkills.length})`,
-        value: learnedText.substring(0, 1024) || '*Không có*',
+        name: `✅ Đã học (${learnedSkills.length})`,
+        value: learnedText || 'Không có',
         inline: false
       });
     }
 
-    // Phần 2: Kỹ năng chưa học
+    // Kỹ năng chưa học - rút gọn hơn nữa
     if (unlearnedSkills.length > 0) {
       let unlearnedText = '';
       for (const skill of unlearnedSkills) {
         const levelsNeeded = skill.required_level - character.level;
-        unlearnedText += `🔒 **${skill.name}** [Lv.${skill.required_level}] ${levelsNeeded > 0 ? `- còn ${levelsNeeded}` : ''}\n`;
-        
-        if (skill.skill_type === 'attack') {
-          const stats = [];
-          stats.push(`💥${Math.round(skill.damage_multiplier * 100)}%`);
-          if (skill.defense_break > 0) stats.push(`🛡️${Math.round(skill.defense_break * 100)}%`);
-          if (skill.crit_bonus > 0) stats.push(`⚡${skill.crit_bonus}%`);
-          if (skill.stun_chance > 0) stats.push(`💫${skill.stun_chance}%`);
-          unlearnedText += `  ${stats.join(' • ')}\n`;
-        } else if (skill.skill_type === 'heal') {
-          unlearnedText += `  💚 Hồi: ${skill.heal_amount} HP\n`;
-        } else if (skill.skill_type === 'buff') {
-          unlearnedText += `  ⭐ Buff: Tăng DMG & Crit\n`;
+        unlearnedText += `🔒 **${skill.name}** Lv.\`${skill.required_level}\``;
+        if (levelsNeeded > 0) {
+          unlearnedText += ` (còn \`${levelsNeeded}\`)`;
         }
+        unlearnedText += '\n';
       }
       
       embed.addFields({
-        name: `🔒 Kỹ năng chưa học (${unlearnedSkills.length})`,
-        value: unlearnedText.substring(0, 1024) || '*Không có*',
+        name: `🔒 Chưa học (${unlearnedSkills.length})`,
+        value: unlearnedText || 'Không có',
         inline: false
       });
     }
   } else {
     embed.addFields({
-      name: '📋 Danh sách kỹ năng',
+      name: '📝 Kỹ năng',
       value: '*Chưa có kỹ năng! Hãy lên cấp để mở khóa.*',
       inline: false
     });
   }
 
-  embed.setFooter({ text: 'Skills sẽ tự động sử dụng trong combat!' });
-
   await message.reply({ embeds: [embed] });
-}
-
-function getSkillTypeName(type: string): string {
-  const types: { [key: string]: string } = {
-    'attack': 'Tấn công',
-    'defense': 'Phòng thủ',
-    'heal': 'Hồi phục',
-    'buff': 'Tăng cường'
-  };
-  return types[type] || type;
 }
 
 async function handleHelp(message: Message) {
   const helpEmbed = new EmbedBuilder()
-    .setColor(0x1E90FF)
-    .setTitle('🐉 NGỌC RỒNG BOT - HƯỚNG DẪN')
-    .setDescription('**Prefix:** `z` | Bot Discord RPG lấy cảm hứng từ Dragon Ball')
+    .setColor('#FFD700')
+    .setTitle('🐉 Hướng dẫn Ngọc Rồng Bot')
+    .setDescription('**Prefix:** `z` hoặc `/` (slash commands)')
     .addFields(
-      { 
-        name: '🎮 Lệnh Cơ Bản', 
-        value: '`zstart` `zbatdau` - Bắt đầu hành trình\n`zprofile` `zinfo` `ztt` - Xem thông tin nhân vật\n`zskills` `zkynang` `zkn` - Xem kỹ năng chiến đấu\n`zinventory` `zinv` `ztui` - Xem túi đồ', 
-        inline: false 
+      {
+        name: '📋 Danh sách lệnh',
+        value: 
+          '```\n' +
+          '┌─ 🎮 CƠ BẢN\n' +
+          '├─ zstart      • Tạo nhân vật mới\n' +
+          '├─ zprofile    • Xem thông tin nhân vật\n' +
+          '├─ zskills     • Xem kỹ năng chiến đấu\n' +
+          '├─ zinventory  • Xem túi đồ & trang bị\n' +
+          '└─ zhelp       • Hiển thị trợ giúp này\n' +
+          '\n' +
+          '┌─ ⚔️ CHIẾN ĐẤU\n' +
+          '└─ zhunt       • Săn quái vật, lên cấp\n' +
+          '```',
+        inline: false
       },
-      { 
-        name: '⚔️ Chiến Đấu', 
-        value: '`zhunt` `zsan` `zdanhquai` - Săn quái vật để lên cấp\n\n**💡 Cơ chế chiến đấu:**\n• Skills tự động sử dụng trong combat\n• Critical hits & Dodge mechanics\n• Stun effects có thể làm địch bỏ lượt\n• KI tự động hồi phục mỗi turn (+10)', 
-        inline: false 
+      {
+        name: '💡 Mẹo hữu ích',
+        value: 
+          '```\n' +
+          '• Skills tự động sử dụng trong combat\n' +
+          '• KI tự động hồi phục mỗi lượt (+10)\n' +
+          '• Có cơ hội critical, dodge và stun\n' +
+          '• Level up hồi đầy HP/KI ngay lập tức\n' +
+          '• Thua trận mất 10% vàng và HP về 1\n' +
+          '• Săn quái có cơ hội nhận vật phẩm\n' +
+          '```',
+        inline: false
       },
-      { 
-        name: '⚡ Hệ Thống Kỹ Năng', 
-        value: '• Mỗi chủng tộc (Saiyan/Namek/Earthling) có skills riêng\n• Xem skills theo chủng tộc: `zskills`\n• Học skills mới khi lên cấp\n• Skills mạnh hơn tấn công thường nhưng tốn KI\n• Một số skills gây choáng hoặc phá giáp', 
-        inline: false 
-      },
-      { 
-        name: '📊 Stats Mới', 
-        value: '**💥 Critical Chance** - Tỉ lệ chí mạng\n**💥 Critical Damage** - Hệ số sát thương chí mạng\n**💨 Dodge** - Tỉ lệ né tránh\n**⚡ Speed** - Quyết định ai đánh trước', 
-        inline: false 
-      },
-      { 
-        name: '🎯 Mẹo Hữu Ích', 
-        value: '• Săn quái để lên level và mở khóa skills mới\n• Quái có thể rơi vật phẩm quý hiếm\n• Thua trận sẽ mất 10% vàng\n• HP/KI phục hồi đầy khi level up', 
-        inline: false 
-      },
-      { 
-        name: '🔗 Slash Commands', 
-        value: '`/start` `/profile` `/hunt` `/inventory` `/skills`', 
-        inline: false 
+      {
+        name: '🎯 Chủng tộc & Kỹ năng',
+        value: 
+          '```\n' +
+          '⚡ Saiyan   • Skills tấn công mạnh\n' +
+          '🟢 Namek    • Skills hỗ trợ & hồi phục\n' +
+          '🌍 Trái đất • Skills cân bằng, đa dạng\n' +
+          '\n' +
+          'Mỗi chủng tộc có bộ kỹ năng riêng biệt!\n' +
+          'Mở khóa skills mới khi lên cấp.\n' +
+          '```',
+        inline: false
       }
     )
-    .setFooter({ text: 'Chúc bạn chiến đấu vui vẻ!' })
-    .setTimestamp();
+    .setFooter({ text: 'Sử dụng zstart để bắt đầu hành trình!' });
 
   await message.reply({ embeds: [helpEmbed] });
 }

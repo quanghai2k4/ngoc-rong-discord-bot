@@ -346,10 +346,38 @@ export class BattleService {
 
     if (selectedSkill) {
       const critText = isCritical ? ' 💥 **CHÍ MẠNG!**' : '';
-      text = `${selectedSkill.name} ${name} tấn công gây **\`${finalDamage}\`** sát thương!${critText}`;
+      const stunText = selectedSkill.stun_chance > 0 ? ' 💫' : '';
+      
+      // Lấy emoji từ description của skill (ký tự đầu tiên nếu là emoji)
+      const skillEmoji = selectedSkill.description ? selectedSkill.description.split(' ')[0] : '⚡';
+      
+      // Tạo mô tả động dựa vào loại skill
+      if (selectedSkill.skill_type === 'attack') {
+        const actionVerbs = [
+          'tung ra', 'phóng', 'khai hỏa', 'giải phóng', 'bùng nổ',
+          'tấn công bằng', 'sử dụng', 'phát động'
+        ];
+        const verb = actionVerbs[Math.floor(Math.random() * actionVerbs.length)];
+        text = `${skillEmoji} ${name} ${verb} **${selectedSkill.name}**! Gây **\`${finalDamage}\`** sát thương!${critText}${stunText}`;
+      } else if (selectedSkill.skill_type === 'heal') {
+        text = `💚 ${name} sử dụng **${selectedSkill.name}**! Hồi phục **\`${selectedSkill.heal_amount}\`** HP!`;
+      } else if (selectedSkill.skill_type === 'buff') {
+        text = `⭐ ${name} kích hoạt **${selectedSkill.name}**! Sức mạnh tăng vọt!${critText}`;
+      } else {
+        text = `${skillEmoji} ${name} tung **${selectedSkill.name}**! Gây **\`${finalDamage}\`** sát thương!${critText}`;
+      }
     } else {
       const critText = isCritical ? ' 💥 **CHÍ MẠNG!**' : '';
-      text = `⚔️ ${name} tấn công gây **\`${finalDamage}\`** sát thương!${critText}`;
+      const attackTypes = [
+        '⚔️ đánh thẳng',
+        '👊 ra đòn',
+        '🥊 tung đấm', 
+        '🦶 đá mạnh',
+        '⚔️ vung kiếm',
+        '👊 phản công'
+      ];
+      const attackType = attackTypes[Math.floor(Math.random() * attackTypes.length)];
+      text = `${attackType.split(' ')[0]} ${name} ${attackType.split(' ').slice(1).join(' ')} gây **\`${finalDamage}\`** sát thương!${critText}`;
     }
 
     return {

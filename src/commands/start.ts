@@ -85,13 +85,30 @@ export const startCommand: Command = {
           components: [],
         });
 
-        // Store race selection temporarily (in real app, use a cache or database)
-        // For now, we'll create a simple character with default name
-        const defaultName = `${race?.name}_${interaction.user.username.substring(0, 10)}`;
+        // Tên nhân vật là tên Discord của người chơi
+        const defaultName = interaction.user.username;
         const character = await CharacterService.create(player.id, defaultName, raceId);
 
+        const successEmbed = new EmbedBuilder()
+          .setColor('#00FF00')
+          .setTitle('🎉 Tạo nhân vật thành công!')
+          .setDescription(`**${character.name}** (${race?.name})`)
+          .addFields(
+            {
+              name: '📊 Chỉ số ban đầu',
+              value: `❤️ HP: **\`${character.max_hp}\`** • 💙 KI: **\`${character.max_ki}\`** • ⚡ Speed: **\`${character.speed}\`**\n⚔️ Attack: **\`${character.attack}\`** • 🛡️ Defense: **\`${character.defense}\`**`,
+              inline: false
+            },
+            {
+              name: '📍 Vị trí',
+              value: `**${character.location}**`,
+              inline: false
+            }
+          )
+          .setFooter({ text: 'Sử dụng /profile để xem thông tin chi tiết!' });
+
         await i.followUp({
-          content: `🎉 Đã tạo nhân vật **${character.name}** thành công!\n\n*Sử dụng \`/profile\` để xem thông tin chi tiết.*`,
+          embeds: [successEmbed],
           ephemeral: false,
         });
       });

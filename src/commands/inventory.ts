@@ -34,22 +34,20 @@ export const inventoryCommand: Command = {
       [character.id]
     );
 
-    if (items.rows.length === 0) {
-      const emptyEmbed = new EmbedBuilder()
-        .setColor(0x808080)
-        .setTitle(`🎒 Túi đồ của ${character.name}`)
-        .addFields({ name: '💰 Vàng', value: `**\`${character.gold}\`**`, inline: false })
-        .setDescription('*❌ Túi đồ trống!*')
-        .setTimestamp();
+    const embed = new EmbedBuilder()
+      .setColor('#00FF00')
+      .setTitle(`🎒 Túi đồ của ${character.name}`)
+      .setDescription(`💰 Vàng: **\`${character.gold}\`**`);
 
-      await interaction.editReply({ embeds: [emptyEmbed] });
+    if (items.rows.length === 0) {
+      embed.addFields({
+        name: '📦 Túi đồ',
+        value: '*❌ Túi đồ trống!*',
+        inline: false
+      });
+      await interaction.editReply({ embeds: [embed] });
       return;
     }
-
-    const embed = new EmbedBuilder()
-      .setColor(0x9370DB)
-      .setTitle(`🎒 Túi đồ của ${character.name}`)
-      .addFields({ name: '💰 Vàng', value: `**\`${character.gold}\`**`, inline: false });
 
     const itemsByType = items.rows.reduce((acc: any, item: any) => {
       if (!acc[item.type_name]) {
@@ -60,10 +58,11 @@ export const inventoryCommand: Command = {
     }, {});
 
     for (const [typeName, typeItems] of Object.entries(itemsByType)) {
-      const itemList = (typeItems as any[]).map((item, idx, arr) => {
+      let itemText = '';
+      (typeItems as any[]).forEach((item, idx, arr) => {
         const isLast = idx === arr.length - 1;
         const prefix = isLast ? '╰─' : '├─';
-        let info = `${prefix} ${item.equipped ? '✅' : '⬜'} **${item.name}** x\`${item.quantity}\``;
+        itemText += `${prefix} ${item.equipped ? '✅' : '⬜'} **${item.name}** x\`${item.quantity}\`\n`;
         const stats = [];
         if (item.hp_bonus > 0) stats.push(`❤️ +${item.hp_bonus}`);
         if (item.ki_bonus > 0) stats.push(`💙 +${item.ki_bonus}`);
@@ -71,19 +70,16 @@ export const inventoryCommand: Command = {
         if (item.defense_bonus > 0) stats.push(`🛡️ +${item.defense_bonus}`);
         if (item.speed_bonus > 0) stats.push(`⚡ +${item.speed_bonus}`);
         if (stats.length > 0) {
-          info += `\n   ${stats.join(' • ')}`;
+          itemText += `   ${stats.join(' • ')}\n`;
         }
-        return info;
-      }).join('\n');
-
+      });
+      
       embed.addFields({
         name: `📦 ${typeName}`,
-        value: itemList || '*Trống*',
-        inline: false,
+        value: itemText,
+        inline: false
       });
     }
-
-    embed.setTimestamp();
 
     await interaction.editReply({ embeds: [embed] });
   },

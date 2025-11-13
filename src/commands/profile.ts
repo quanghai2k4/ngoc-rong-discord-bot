@@ -43,39 +43,31 @@ export const profileCommand: Command = {
     const expBar = '█'.repeat(expPercentage) + '░'.repeat(10 - expPercentage);
 
     const embed = new EmbedBuilder()
-      .setColor(0x00FF00)
+      .setColor('#0099ff')
       .setTitle(`⚔️ ${character.name}`)
-      .setDescription(
-        `**${race?.name}** • Level **${character.level}** • 💰 **${character.gold}** vàng\n` +
-        `╰─ 📍 ${character.location}`
-      )
+      .setDescription(`**${race?.name}** • Level **${character.level}** • 💰 **${character.gold}** vàng\n╰─ 📍 ${character.location}`)
       .addFields(
-        {
-          name: '❤️ HP',
+        { 
+          name: '❤️ HP', 
           value: `\`${character.hp}\`/\`${character.max_hp}\` ${hpBar}`,
-          inline: false
+          inline: false 
         },
-        {
-          name: '💙 KI',
+        { 
+          name: '💙 KI', 
           value: `\`${character.ki}\`/\`${character.max_ki}\` ${kiBar}`,
-          inline: false
+          inline: false 
         },
-        {
-          name: '✨ EXP',
+        { 
+          name: '✨ EXP', 
           value: `\`${character.experience}\`/\`${expNeeded}\` ${expBar}`,
-          inline: false
+          inline: false 
         },
         {
           name: '⚔️ Combat Stats',
-          value: 
-            `╭─ ⚔️ ATK: **${character.attack}** • 🛡️ DEF: **${character.defense}**\n` +
-            `├─ ⚡ SPD: **${character.speed}**\n` +
-            `├─ 💥 Crit: **${character.critical_chance}%** (x**${character.critical_damage}**)\n` +
-            `╰─ 💨 Dodge: **${character.dodge_chance}%**`,
+          value: `╭─ ⚔️ ATK: **${character.attack}** • 🛡️ DEF: **${character.defense}**\n├─ ⚡ SPD: **${character.speed}**\n├─ 💥 Crit: **${character.critical_chance}%** (x**${character.critical_damage}**)\n╰─ 💨 Dodge: **${character.dodge_chance}%**`,
           inline: false
         }
       )
-      .setTimestamp()
       .setFooter({ text: `ID: ${character.id}` });
 
     await interaction.editReply({ embeds: [embed] });
