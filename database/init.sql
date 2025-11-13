@@ -132,8 +132,54 @@ CREATE TABLE IF NOT EXISTS battle_logs (
     battle_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Skills table
+CREATE TABLE IF NOT EXISTS skills (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    skill_type VARCHAR(50) NOT NULL, -- 'attack', 'defense', 'heal', 'buff'
+    race_id INTEGER REFERENCES character_races(id), -- NULL = all races can learn
+    required_level INTEGER DEFAULT 1,
+    ki_cost INTEGER DEFAULT 20,
+    cooldown INTEGER DEFAULT 0, -- turns
+    damage_multiplier DECIMAL(4,2) DEFAULT 1.5, -- for attack skills
+    heal_amount INTEGER DEFAULT 0, -- for heal skills
+    crit_bonus DECIMAL(4,2) DEFAULT 0.0, -- extra crit chance
+    stun_chance DECIMAL(4,2) DEFAULT 0.0, -- chance to stun (0-100)
+    defense_break DECIMAL(4,2) DEFAULT 0.0, -- ignore % of defense
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Character skills (learned skills)
+CREATE TABLE IF NOT EXISTS character_skills (
+    id SERIAL PRIMARY KEY,
+    character_id INTEGER REFERENCES characters(id) ON DELETE CASCADE,
+    skill_id INTEGER REFERENCES skills(id),
+    learned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(character_id, skill_id)
+);
+
+-- Monster skills
+CREATE TABLE IF NOT EXISTS monster_skills (
+    id SERIAL PRIMARY KEY,
+    monster_id INTEGER REFERENCES monsters(id) ON DELETE CASCADE,
+    skill_id INTEGER REFERENCES skills(id),
+    use_probability DECIMAL(4,2) DEFAULT 50.00 -- % chance to use
+);
+
+-- Add critical stats to characters
+ALTER TABLE characters ADD COLUMN IF NOT EXISTS critical_chance DECIMAL(4,2) DEFAULT 5.00;
+ALTER TABLE characters ADD COLUMN IF NOT EXISTS critical_damage DECIMAL(4,2) DEFAULT 1.50;
+ALTER TABLE characters ADD COLUMN IF NOT EXISTS dodge_chance DECIMAL(4,2) DEFAULT 5.00;
+
+-- Add critical stats to monsters  
+ALTER TABLE monsters ADD COLUMN IF NOT EXISTS critical_chance DECIMAL(4,2) DEFAULT 3.00;
+ALTER TABLE monsters ADD COLUMN IF NOT EXISTS critical_damage DECIMAL(4,2) DEFAULT 1.30;
+
 -- Create indexes for better performance
 CREATE INDEX idx_characters_player_id ON characters(player_id);
 CREATE INDEX idx_character_items_character_id ON character_items(character_id);
 CREATE INDEX idx_character_quests_character_id ON character_quests(character_id);
 CREATE INDEX idx_battle_logs_character_id ON battle_logs(character_id);
+CREATE INDEX idx_character_skills_character_id ON character_skills(character_id);
+CREATE INDEX idx_skills_race_id ON skills(race_id);

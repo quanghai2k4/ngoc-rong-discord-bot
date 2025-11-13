@@ -26,7 +26,7 @@ export const startCommand: Command = {
 
     if (existingChar) {
       await interaction.editReply({
-        content: `Bạn đã có nhân vật **${existingChar.name}** rồi! Sử dụng /profile để xem thông tin.`,
+        content: `❌ Bạn đã có nhân vật **${existingChar.name}** rồi! Sử dụng \`/profile\` để xem thông tin.`,
       });
       return;
     }
@@ -36,11 +36,11 @@ export const startCommand: Command = {
     const embed = new EmbedBuilder()
       .setColor(0x0099FF)
       .setTitle('🐉 Chào mừng đến với thế giới Ngọc Rồng!')
-      .setDescription('Hãy chọn chủng tộc và tạo tên cho nhân vật của bạn!')
+      .setDescription('*Hãy chọn chủng tộc và tạo tên cho nhân vật của bạn!*')
       .addFields(
         races.map(race => ({
           name: `${race.name}`,
-          value: `${race.description}\nHP: +${race.hp_bonus} | KI: +${race.ki_bonus} | ATK: +${race.attack_bonus} | DEF: +${race.defense_bonus}`,
+          value: `*${race.description}*\n\`HP: +${race.hp_bonus}\` | \`KI: +${race.ki_bonus}\` | \`ATK: +${race.attack_bonus}\` | \`DEF: +${race.defense_bonus}\``,
           inline: false
         }))
       );
@@ -72,7 +72,7 @@ export const startCommand: Command = {
 
       collector.on('collect', async (i: any) => {
         if (i.user.id !== interaction.user.id) {
-          await i.reply({ content: 'Đây không phải lựa chọn của bạn!', ephemeral: true });
+          await i.reply({ content: '❌ Đây không phải lựa chọn của bạn!', ephemeral: true });
           return;
         }
 
@@ -80,7 +80,7 @@ export const startCommand: Command = {
         const race = races.find(r => r.id === raceId);
 
         await i.update({
-          content: `Bạn đã chọn chủng tộc **${race?.name}**!\n\nVui lòng sử dụng lệnh: \`/createchar <tên nhân vật>\` để hoàn tất việc tạo nhân vật.`,
+          content: `✅ Bạn đã chọn chủng tộc **${race?.name}**!\n\n*Đang tạo nhân vật...*`,
           embeds: [],
           components: [],
         });
@@ -91,7 +91,7 @@ export const startCommand: Command = {
         const character = await CharacterService.create(player.id, defaultName, raceId);
 
         await i.followUp({
-          content: `✅ Đã tạo nhân vật **${character.name}** thành công!\nSử dụng /profile để xem thông tin chi tiết.`,
+          content: `🎉 Đã tạo nhân vật **${character.name}** thành công!\n\n*Sử dụng \`/profile\` để xem thông tin chi tiết.*`,
           ephemeral: false,
         });
       });
@@ -99,7 +99,7 @@ export const startCommand: Command = {
       collector.on('end', (collected: any) => {
         if (collected.size === 0) {
           interaction.editReply({
-            content: 'Hết thời gian chọn! Vui lòng thử lại với /start',
+            content: '⏰ Hết thời gian chọn! Vui lòng thử lại với `/start`',
             components: [],
           });
         }
@@ -107,7 +107,7 @@ export const startCommand: Command = {
     } catch (error) {
       console.error('Error in start command:', error);
       await interaction.editReply({
-        content: 'Đã xảy ra lỗi! Vui lòng thử lại.',
+        content: '❌ Đã xảy ra lỗi! Vui lòng thử lại.',
         components: [],
       });
     }

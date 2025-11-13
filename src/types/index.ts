@@ -32,6 +32,9 @@ export interface Character {
   speed: number;
   gold: number;
   location: string;
+  critical_chance: number;
+  critical_damage: number;
+  dodge_chance: number;
   created_at: Date;
 }
 
@@ -70,6 +73,8 @@ export interface Monster {
   experience_reward: number;
   gold_reward: number;
   location: string;
+  critical_chance: number;
+  critical_damage: number;
 }
 
 export interface Quest {
@@ -91,4 +96,28 @@ export interface CharacterQuest {
   completed: boolean;
   started_at: Date;
   completed_at?: Date;
+}
+
+export interface Skill {
+  id: number;
+  name: string;
+  description: string;
+  skill_type: 'attack' | 'defense' | 'heal' | 'buff';
+  race_id: number | null;
+  required_level: number;
+  ki_cost: number;
+  cooldown: number;
+  damage_multiplier: number;
+  heal_amount: number;
+  crit_bonus: number;
+  stun_chance: number;
+  defense_break: number;
+  created_at: Date;
+}
+
+export interface CharacterSkill {
+  id: number;
+  character_id: number;
+  skill_id: number;
+  learned_at: Date;
 }

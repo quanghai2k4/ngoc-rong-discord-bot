@@ -1,7 +1,8 @@
-import { Character, Monster } from '../types';
+import { Character, Monster, Skill } from '../types';
 import { query } from '../database/db';
 import { CharacterService } from './CharacterService';
 import { MonsterService } from './MonsterService';
+import { SkillService } from './SkillService';
 
 export interface BattleResult {
   won: boolean;
@@ -10,6 +11,8 @@ export interface BattleResult {
   goldGained: number;
   itemsDropped: any[];
   characterDied: boolean;
+  leveledUp: boolean;
+  newLevel?: number;
 }
 
 export interface BattleRound {
@@ -18,80 +21,193 @@ export interface BattleRound {
   monsterAction: string;
   characterHp: number;
   monsterHp: number;
+  characterKi: number;
+}
+
+interface CombatAction {
+  damage: number;
+  isCritical: boolean;
+  isDodged: boolean;
+  isStunned: boolean;
+  skill?: Skill;
+  text: string;
 }
 
 export class BattleService {
   static async battle(character: Character, monster: Monster): Promise<BattleResult> {
     const rounds: BattleRound[] = [];
     let charHp = character.hp;
+    let charKi = character.ki;
     let monsterHp = monster.hp;
     let roundNumber = 0;
+    let monsterStunned = false;
+    let characterStunned = false;
+
+    // Lấy skills của character và monster
+    const characterSkills = await SkillService.getCharacterSkills(character.id);
+    const monsterSkills = await SkillService.getMonsterSkills(monster.id);
 
     while (charHp > 0 && monsterHp > 0 && roundNumber < 50) {
       roundNumber++;
 
+      // Reset stun status at start of round
+      if (roundNumber > 1) {
+        if (monsterStunned) monsterStunned = false;
+        if (characterStunned) characterStunned = false;
+      }
+
       // Determine who attacks first based on speed
       const characterFirst = character.speed >= monster.speed;
 
+      let charAction: CombatAction;
+      let monsterAction: CombatAction;
+
       if (characterFirst) {
         // Character attacks
-        const charDamage = this.calculateDamage(character.attack, monster.defense);
-        monsterHp -= charDamage;
+        if (characterStunned) {
+          charAction = {
+            damage: 0,
+            isCritical: false,
+            isDodged: false,
+            isStunned: true,
+            text: '💤 *Bạn bị choáng! Không thể hành động*'
+          };
+        } else {
+          charAction = await this.performAction(
+            character,
+            monster,
+            characterSkills,
+            charKi,
+            'character'
+          );
+          charKi = Math.max(0, charKi - (charAction.skill?.ki_cost || 0));
+          monsterHp -= charAction.damage;
 
-        const charAction = `Bạn tấn công gây ${charDamage} sát thương!`;
-        
+          // Check for stun
+          if (charAction.skill && Math.random() * 100 < charAction.skill.stun_chance) {
+            monsterStunned = true;
+          }
+        }
+
         if (monsterHp <= 0) {
           rounds.push({
             round: roundNumber,
-            characterAction: charAction,
-            monsterAction: `${monster.name} đã bị đánh bại!`,
+            characterAction: charAction.text,
+            monsterAction: `💀 **${monster.name}** đã bị đánh bại!`,
             characterHp: charHp,
             monsterHp: 0,
+            characterKi: charKi,
           });
           break;
         }
 
         // Monster attacks
-        const monsterDamage = this.calculateDamage(monster.attack, character.defense);
-        charHp -= monsterDamage;
+        if (monsterStunned) {
+          monsterAction = {
+            damage: 0,
+            isCritical: false,
+            isDodged: false,
+            isStunned: true,
+            text: `💤 **${monster.name}** bị choáng! Không thể phản công`
+          };
+        } else {
+          monsterAction = await this.performAction(
+            monster,
+            character,
+            monsterSkills,
+            999, // Monsters have unlimited KI
+            'monster'
+          );
+          charHp -= monsterAction.damage;
+
+          // Check for stun
+          if (monsterAction.skill && Math.random() * 100 < monsterAction.skill.stun_chance) {
+            characterStunned = true;
+          }
+        }
 
         rounds.push({
           round: roundNumber,
-          characterAction: charAction,
-          monsterAction: `${monster.name} phản công gây ${monsterDamage} sát thương!`,
+          characterAction: charAction.text,
+          monsterAction: monsterAction.text,
           characterHp: charHp,
           monsterHp: monsterHp,
+          characterKi: charKi,
         });
       } else {
         // Monster attacks first
-        const monsterDamage = this.calculateDamage(monster.attack, character.defense);
-        charHp -= monsterDamage;
+        if (monsterStunned) {
+          monsterAction = {
+            damage: 0,
+            isCritical: false,
+            isDodged: false,
+            isStunned: true,
+            text: `💤 **${monster.name}** bị choáng! Không thể tấn công`
+          };
+        } else {
+          monsterAction = await this.performAction(
+            monster,
+            character,
+            monsterSkills,
+            999,
+            'monster'
+          );
+          charHp -= monsterAction.damage;
 
-        const monsterAction = `${monster.name} tấn công gây ${monsterDamage} sát thương!`;
+          if (monsterAction.skill && Math.random() * 100 < monsterAction.skill.stun_chance) {
+            characterStunned = true;
+          }
+        }
 
         if (charHp <= 0) {
           rounds.push({
             round: roundNumber,
-            characterAction: 'Bạn đã bị đánh bại!',
-            monsterAction: monsterAction,
+            characterAction: '💀 *Bạn đã bị đánh bại!*',
+            monsterAction: monsterAction.text,
             characterHp: 0,
             monsterHp: monsterHp,
+            characterKi: charKi,
           });
           break;
         }
 
         // Character attacks
-        const charDamage = this.calculateDamage(character.attack, monster.defense);
-        monsterHp -= charDamage;
+        if (characterStunned) {
+          charAction = {
+            damage: 0,
+            isCritical: false,
+            isDodged: false,
+            isStunned: true,
+            text: '💤 *Bạn bị choáng! Không thể phản công*'
+          };
+        } else {
+          charAction = await this.performAction(
+            character,
+            monster,
+            characterSkills,
+            charKi,
+            'character'
+          );
+          charKi = Math.max(0, charKi - (charAction.skill?.ki_cost || 0));
+          monsterHp -= charAction.damage;
+
+          if (charAction.skill && Math.random() * 100 < charAction.skill.stun_chance) {
+            monsterStunned = true;
+          }
+        }
 
         rounds.push({
           round: roundNumber,
-          characterAction: `Bạn phản công gây ${charDamage} sát thương!`,
-          monsterAction: monsterAction,
+          characterAction: charAction.text,
+          monsterAction: monsterAction.text,
           characterHp: charHp,
           monsterHp: monsterHp,
+          characterKi: charKi,
         });
       }
+
+      // Regen KI mỗi turn
+      charKi = Math.min(character.max_ki, charKi + 10);
     }
 
     const won = monsterHp <= 0 && charHp > 0;
@@ -100,16 +216,22 @@ export class BattleService {
     let expGained = 0;
     let goldGained = 0;
     let itemsDropped: any[] = [];
+    let leveledUp = false;
+    let newLevel = character.level;
 
     if (won) {
       expGained = monster.experience_reward;
       goldGained = monster.gold_reward;
 
       // Update character
-      await CharacterService.addExperience(character.id, expGained);
+      const updatedChar = await CharacterService.addExperience(character.id, expGained);
+      leveledUp = updatedChar.level > character.level;
+      newLevel = updatedChar.level;
+
+      // Restore full HP and KI after battle
       await query(
-        'UPDATE characters SET gold = gold + $1, hp = $2 WHERE id = $3',
-        [goldGained, Math.max(1, charHp), character.id]
+        'UPDATE characters SET gold = gold + $1, hp = max_hp, ki = max_ki WHERE id = $2',
+        [goldGained, character.id]
       );
 
       // Check for item drops
@@ -128,10 +250,10 @@ export class BattleService {
         [character.id, monster.id, true, expGained, goldGained]
       );
     } else {
-      // Character lost - penalty
+      // Character lost - penalty and restore HP/KI
       const goldLost = Math.floor(character.gold * 0.1);
       await query(
-        'UPDATE characters SET gold = gold - $1, hp = 1 WHERE id = $2',
+        'UPDATE characters SET gold = gold - $1, hp = max_hp, ki = max_ki WHERE id = $2',
         [goldLost, character.id]
       );
 
@@ -149,13 +271,95 @@ export class BattleService {
       goldGained,
       itemsDropped,
       characterDied,
+      leveledUp,
+      newLevel,
     };
   }
 
-  private static calculateDamage(attack: number, defense: number): number {
-    const baseDamage = attack - Math.floor(defense * 0.5);
+  private static async performAction(
+    attacker: Character | Monster,
+    defender: Character | Monster,
+    skills: Skill[],
+    currentKi: number,
+    type: 'character' | 'monster'
+  ): Promise<CombatAction> {
+    // AI quyết định dùng skill hay không
+    let selectedSkill: Skill | undefined;
+
+    if (skills.length > 0) {
+      // Lọc skills có thể dùng (đủ KI)
+      const usableSkills = skills.filter(s => s.ki_cost <= currentKi);
+
+      if (usableSkills.length > 0) {
+        // 40% chance dùng skill nếu có
+        if (Math.random() < 0.4) {
+          // Ưu tiên skills mạnh hơn
+          selectedSkill = usableSkills.sort((a, b) => b.damage_multiplier - a.damage_multiplier)[0];
+        }
+      }
+    }
+
+    // Check dodge
+    const dodgeChance = (defender as any).dodge_chance || 0;
+    const isDodged = Math.random() * 100 < dodgeChance;
+
+    if (isDodged) {
+      const name = type === 'character' ? 'Bạn' : (attacker as Monster).name;
+      return {
+        damage: 0,
+        isCritical: false,
+        isDodged: true,
+        isStunned: false,
+        text: `💨 ${name} tấn công nhưng bị né tránh!`
+      };
+    }
+
+    // Calculate damage
+    let baseDamage: number;
+    let critChance = (attacker as any).critical_chance || 5;
+    let critMultiplier = (attacker as any).critical_damage || 1.5;
+
+    if (selectedSkill) {
+      // Skill damage
+      const skillDamage = attacker.attack * selectedSkill.damage_multiplier;
+      const defenseReduction = defender.defense * (1 - selectedSkill.defense_break);
+      baseDamage = skillDamage - Math.floor(defenseReduction * 0.5);
+      critChance += selectedSkill.crit_bonus;
+    } else {
+      // Normal attack
+      baseDamage = attacker.attack - Math.floor(defender.defense * 0.5);
+    }
+
+    // Check critical
+    const isCritical = Math.random() * 100 < critChance;
+    if (isCritical) {
+      baseDamage *= critMultiplier;
+    }
+
+    // Variance
     const variance = Math.random() * 0.2 + 0.9; // 90% - 110%
-    return Math.max(1, Math.floor(baseDamage * variance));
+    const finalDamage = Math.max(1, Math.floor(baseDamage * variance));
+
+    // Build text
+    let text: string;
+    const name = type === 'character' ? 'Bạn' : `**${(attacker as Monster).name}**`;
+
+    if (selectedSkill) {
+      const critText = isCritical ? ' 💥 **CHÍ MẠNG!**' : '';
+      text = `${selectedSkill.name} ${name} tấn công gây **\`${finalDamage}\`** sát thương!${critText}`;
+    } else {
+      const critText = isCritical ? ' 💥 **CHÍ MẠNG!**' : '';
+      text = `⚔️ ${name} tấn công gây **\`${finalDamage}\`** sát thương!${critText}`;
+    }
+
+    return {
+      damage: finalDamage,
+      isCritical,
+      isDodged: false,
+      isStunned: false,
+      skill: selectedSkill,
+      text,
+    };
   }
 
   private static async addItemToCharacter(

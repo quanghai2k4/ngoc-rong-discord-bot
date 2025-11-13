@@ -14,13 +14,13 @@ export const inventoryCommand: Command = {
 
     const player = await PlayerService.findByDiscordId(interaction.user.id);
     if (!player) {
-      await interaction.editReply('Bạn chưa có nhân vật! Sử dụng /start để bắt đầu.');
+      await interaction.editReply('❌ Bạn chưa có nhân vật! Sử dụng `/start` để bắt đầu.');
       return;
     }
 
     const character = await CharacterService.findByPlayerId(player.id);
     if (!character) {
-      await interaction.editReply('Bạn chưa có nhân vật! Sử dụng /start để bắt đầu.');
+      await interaction.editReply('❌ Bạn chưa có nhân vật! Sử dụng `/start` để bắt đầu.');
       return;
     }
 
@@ -38,8 +38,8 @@ export const inventoryCommand: Command = {
       const emptyEmbed = new EmbedBuilder()
         .setColor(0x808080)
         .setTitle(`🎒 Túi đồ của ${character.name}`)
-        .addFields({ name: '💰 Vàng', value: `${character.gold}`, inline: false })
-        .setDescription('❌ Túi đồ trống!')
+        .addFields({ name: '💰 Vàng', value: `**\`${character.gold}\`**`, inline: false })
+        .setDescription('*❌ Túi đồ trống!*')
         .setTimestamp();
 
       await interaction.editReply({ embeds: [emptyEmbed] });
@@ -49,7 +49,7 @@ export const inventoryCommand: Command = {
     const embed = new EmbedBuilder()
       .setColor(0x9370DB)
       .setTitle(`🎒 Túi đồ của ${character.name}`)
-      .addFields({ name: '💰 Vàng', value: `${character.gold}`, inline: false });
+      .addFields({ name: '💰 Vàng', value: `**\`${character.gold}\`**`, inline: false });
 
     const itemsByType = items.rows.reduce((acc: any, item: any) => {
       if (!acc[item.type_name]) {
@@ -61,7 +61,7 @@ export const inventoryCommand: Command = {
 
     for (const [typeName, typeItems] of Object.entries(itemsByType)) {
       const itemList = (typeItems as any[]).map(item => {
-        let info = `${item.equipped ? '✅' : '⬜'} ${item.name} x${item.quantity}`;
+        let info = `${item.equipped ? '✅' : '⬜'} **${item.name}** x\`${item.quantity}\``;
         const stats = [];
         if (item.hp_bonus > 0) stats.push(`HP+${item.hp_bonus}`);
         if (item.ki_bonus > 0) stats.push(`KI+${item.ki_bonus}`);
@@ -69,14 +69,14 @@ export const inventoryCommand: Command = {
         if (item.defense_bonus > 0) stats.push(`DEF+${item.defense_bonus}`);
         if (item.speed_bonus > 0) stats.push(`SPD+${item.speed_bonus}`);
         if (stats.length > 0) {
-          info += ` (${stats.join(', ')})`;
+          info += ` *(${stats.join(', ')})*`;
         }
         return info;
       }).join('\n');
 
       embed.addFields({
         name: `📦 ${typeName}`,
-        value: itemList || 'Trống',
+        value: itemList || '*Trống*',
         inline: false,
       });
     }

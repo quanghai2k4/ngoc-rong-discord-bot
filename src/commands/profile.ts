@@ -15,7 +15,7 @@ export const profileCommand: Command = {
 
     if (!player) {
       await interaction.editReply({
-        content: 'Bạn chưa có nhân vật! Sử dụng /start để bắt đầu.',
+        content: '❌ Bạn chưa có nhân vật! Sử dụng `/start` để bắt đầu.',
       });
       return;
     }
@@ -24,7 +24,7 @@ export const profileCommand: Command = {
 
     if (!character) {
       await interaction.editReply({
-        content: 'Bạn chưa có nhân vật! Sử dụng /start để bắt đầu.',
+        content: '❌ Bạn chưa có nhân vật! Sử dụng `/start` để bắt đầu.',
       });
       return;
     }
@@ -37,15 +37,17 @@ export const profileCommand: Command = {
       .setTitle(`⚔️ ${character.name}`)
       .setDescription(`Chủng tộc: **${race?.name}**`)
       .addFields(
-        { name: '📊 Level', value: `${character.level}`, inline: true },
-        { name: '✨ EXP', value: `${character.experience}/${expNeeded}`, inline: true },
-        { name: '💰 Vàng', value: `${character.gold}`, inline: true },
-        { name: '❤️ HP', value: `${character.hp}/${character.max_hp}`, inline: true },
-        { name: '💙 KI', value: `${character.ki}/${character.max_ki}`, inline: true },
-        { name: '⚡ Speed', value: `${character.speed}`, inline: true },
-        { name: '⚔️ Attack', value: `${character.attack}`, inline: true },
-        { name: '🛡️ Defense', value: `${character.defense}`, inline: true },
-        { name: '📍 Vị trí', value: `${character.location}`, inline: true }
+        { name: '📊 Level', value: `**\`${character.level}\`**`, inline: true },
+        { name: '✨ EXP', value: `**\`${character.experience}\`** / \`${expNeeded}\``, inline: true },
+        { name: '💰 Vàng', value: `**\`${character.gold}\`**`, inline: true },
+        { name: '❤️ HP', value: `**\`${character.hp}\`** / \`${character.max_hp}\``, inline: true },
+        { name: '💙 KI', value: `**\`${character.ki}\`** / \`${character.max_ki}\``, inline: true },
+        { name: '⚡ Speed', value: `**\`${character.speed}\`**`, inline: true },
+        { name: '⚔️ Attack', value: `**\`${character.attack}\`**`, inline: true },
+        { name: '🛡️ Defense', value: `**\`${character.defense}\`**`, inline: true },
+        { name: '💥 Crit', value: `**\`${character.critical_chance}%\`** (x\`${character.critical_damage}\`)`, inline: true },
+        { name: '💨 Dodge', value: `**\`${character.dodge_chance}%\`**`, inline: true },
+        { name: '📍 Vị trí', value: `**${character.location}**`, inline: true }
       )
       .setTimestamp()
       .setFooter({ text: `ID: ${character.id}` });

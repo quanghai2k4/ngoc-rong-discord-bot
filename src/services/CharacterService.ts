@@ -1,5 +1,6 @@
 import { query } from '../database/db';
 import { Character, CharacterRace } from '../types';
+import { SkillService } from './SkillService';
 
 export class CharacterService {
   static async findByPlayerId(playerId: number): Promise<Character | null> {
@@ -32,7 +33,13 @@ export class CharacterService {
        RETURNING *`,
       [playerId, raceId, name, maxHp, maxKi, attack, defense]
     );
-    return result.rows[0];
+    
+    const character = result.rows[0];
+    
+    // Auto-learn basic skills
+    await SkillService.autoLearnBasicSkills(character.id, raceId);
+    
+    return character;
   }
 
   static async getAllRaces(): Promise<CharacterRace[]> {

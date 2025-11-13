@@ -16,6 +16,7 @@ import { startCommand } from './commands/start';
 import { profileCommand } from './commands/profile';
 import { huntCommand } from './commands/hunt';
 import { inventoryCommand } from './commands/inventory';
+import { skillsCommand } from './commands/skills';
 
 export interface Command {
   data: SlashCommandBuilder;
@@ -37,6 +38,7 @@ commands.set('start', startCommand);
 commands.set('profile', profileCommand);
 commands.set('hunt', huntCommand);
 commands.set('inventory', inventoryCommand);
+commands.set('skills', skillsCommand);
 
 client.once('ready', async () => {
   console.log(`Bot đã sẵn sàng! Đăng nhập với tên ${client.user?.tag}`);
@@ -76,7 +78,7 @@ client.on('interactionCreate', async (interaction) => {
     console.error('Lỗi khi thực thi command:', error);
     
     const errorMessage = { 
-      content: 'Đã xảy ra lỗi khi thực hiện lệnh này!', 
+      content: '❌ Đã xảy ra lỗi khi thực hiện lệnh này!', 
       ephemeral: true 
     };
     
