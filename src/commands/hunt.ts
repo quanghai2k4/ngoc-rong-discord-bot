@@ -68,10 +68,18 @@ export const huntCommand: Command = {
       );
 
       for (const round of importantRounds.slice(0, 5)) {
-        battleLog += `**Hiệp ${round.round}:**\n`;
-        battleLog += `${round.characterAction}\n`;
-        battleLog += `${round.monsterAction}\n`;
-        battleLog += `*KI:* **\`${round.characterKi}\`**/**\`${character.max_ki}\`**\n\n`;
+        battleLog += `╭─ **Hiệp ${round.round}**\n`;
+        battleLog += `│ ${round.characterAction}\n`;
+        battleLog += `│ ${round.monsterAction}\n`;
+        
+        // Progress bars cho HP của cả 2 bên
+        const charHpPerc = Math.floor((round.characterHp / character.max_hp) * 5);
+        const charHpBar = '█'.repeat(charHpPerc) + '░'.repeat(5 - charHpPerc);
+        
+        const monHpPerc = Math.floor((round.monsterHp / monster.hp) * 5);
+        const monHpBar = '█'.repeat(monHpPerc) + '░'.repeat(5 - monHpPerc);
+        
+        battleLog += `╰─ ❤️ Bạn: ${charHpBar} \`${round.characterHp}\` | Quái: ${monHpBar} \`${round.monsterHp}\`\n\n`;
       }
 
       const resultEmbed = new EmbedBuilder()

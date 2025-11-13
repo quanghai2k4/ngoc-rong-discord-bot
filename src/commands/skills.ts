@@ -35,10 +35,17 @@ export const skillsCommand: Command = {
     const race = await CharacterService.getRaceById(character.race_id);
     const allSkills = await SkillService.getAllSkillsByRace(character.id, character.race_id);
 
+    // Tính progress bar cho KI
+    const kiPercentage = Math.floor((character.ki / character.max_ki) * 10);
+    const kiBar = '█'.repeat(kiPercentage) + '░'.repeat(10 - kiPercentage);
+
     const embed = new EmbedBuilder()
       .setColor(0x9B59B6)
-      .setTitle(`⚡ Kỹ năng của ${character.name}`)
-      .setDescription(`**Chủng tộc:** ${race?.name}\n**Level:** ${character.level}\n**KI hiện tại:** \`${character.ki}\`/\`${character.max_ki}\``)
+      .setTitle(`⚡ Kỹ năng ${race?.name}`)
+      .setDescription(
+        `**${character.name}** • Level **${character.level}**\n` +
+        `╰─ 💙 KI: \`${character.ki}\`/\`${character.max_ki}\` ${kiBar}`
+      )
       .setTimestamp();
 
     if (allSkills.length > 0) {
@@ -50,25 +57,27 @@ export const skillsCommand: Command = {
         let learnedText = '';
         for (const skill of learnedSkills) {
           const canUse = character.level >= skill.required_level;
-          learnedText += `${canUse ? '✅' : '🔒'} **${skill.name}** [Lv.${skill.required_level}] - KI: \`${skill.ki_cost}\`\n`;
-          learnedText += `  ${skill.description}\n`;
+          learnedText += `\n╭─ ${canUse ? '✅' : '🔒'} **${skill.name}**\n`;
+          learnedText += `│ ${skill.description}\n`;
+          learnedText += `│ 📍 Yêu cầu: Lv.**${skill.required_level}** • KI: **${skill.ki_cost}**\n`;
           
           if (skill.skill_type === 'attack') {
-            learnedText += `  *Sát thương:* **\`${(skill.damage_multiplier * 100)}%\`** ATK`;
-            if (skill.defense_break > 0) learnedText += ` | *Phá giáp:* \`${(skill.defense_break * 100)}%\``;
-            if (skill.crit_bonus > 0) learnedText += ` | *Crit+:* \`${skill.crit_bonus}%\``;
-            if (skill.stun_chance > 0) learnedText += ` | *Choáng:* \`${skill.stun_chance}%\``;
-            learnedText += '\n\n';
+            const stats = [];
+            stats.push(`💥 DMG: **${(skill.damage_multiplier * 100)}%**`);
+            if (skill.defense_break > 0) stats.push(`🛡️ Phá giáp: **${(skill.defense_break * 100)}%**`);
+            if (skill.crit_bonus > 0) stats.push(`⚡ Crit+: **${skill.crit_bonus}%**`);
+            if (skill.stun_chance > 0) stats.push(`💫 Choáng: **${skill.stun_chance}%**`);
+            learnedText += `╰─ ${stats.join(' • ')}\n`;
           } else if (skill.skill_type === 'heal') {
-            learnedText += `  *Hồi phục:* **\`${skill.heal_amount}\`** HP\n\n`;
+            learnedText += `╰─ 💚 Hồi phục: **${skill.heal_amount}** HP\n`;
           } else if (skill.skill_type === 'buff') {
-            learnedText += `  *Buff:* Tăng sát thương và tỉ lệ chí mạng\n\n`;
+            learnedText += `╰─ ⭐ Buff: Tăng sát thương và chí mạng\n`;
           }
         }
         
         embed.addFields({
           name: `✅ Kỹ năng đã học (${learnedSkills.length})`,
-          value: learnedText,
+          value: learnedText || '*Không có*',
           inline: false
         });
       }
@@ -77,31 +86,34 @@ export const skillsCommand: Command = {
       if (unlearnedSkills.length > 0) {
         let unlearnedText = '';
         for (const skill of unlearnedSkills) {
-          unlearnedText += `🔒 **${skill.name}** [Lv.${skill.required_level}] - KI: \`${skill.ki_cost}\`\n`;
-          unlearnedText += `  ${skill.description}\n`;
+          const levelsNeeded = skill.required_level - character.level;
+          unlearnedText += `\n╭─ 🔒 **${skill.name}** ${levelsNeeded > 0 ? `*(còn ${levelsNeeded} level)*` : ''}\n`;
+          unlearnedText += `│ ${skill.description}\n`;
+          unlearnedText += `│ 📍 Yêu cầu: Lv.**${skill.required_level}** • KI: **${skill.ki_cost}**\n`;
           
           if (skill.skill_type === 'attack') {
-            unlearnedText += `  *Sát thương:* **\`${(skill.damage_multiplier * 100)}%\`** ATK`;
-            if (skill.defense_break > 0) unlearnedText += ` | *Phá giáp:* \`${(skill.defense_break * 100)}%\``;
-            if (skill.crit_bonus > 0) unlearnedText += ` | *Crit+:* \`${skill.crit_bonus}%\``;
-            if (skill.stun_chance > 0) unlearnedText += ` | *Choáng:* \`${skill.stun_chance}%\``;
-            unlearnedText += '\n\n';
+            const stats = [];
+            stats.push(`💥 DMG: **${(skill.damage_multiplier * 100)}%**`);
+            if (skill.defense_break > 0) stats.push(`🛡️ Phá giáp: **${(skill.defense_break * 100)}%**`);
+            if (skill.crit_bonus > 0) stats.push(`⚡ Crit+: **${skill.crit_bonus}%**`);
+            if (skill.stun_chance > 0) stats.push(`💫 Choáng: **${skill.stun_chance}%**`);
+            unlearnedText += `╰─ ${stats.join(' • ')}\n`;
           } else if (skill.skill_type === 'heal') {
-            unlearnedText += `  *Hồi phục:* **\`${skill.heal_amount}\`** HP\n\n`;
+            unlearnedText += `╰─ 💚 Hồi phục: **${skill.heal_amount}** HP\n`;
           } else if (skill.skill_type === 'buff') {
-            unlearnedText += `  *Buff:* Tăng sát thương và tỉ lệ chí mạng\n\n`;
+            unlearnedText += `╰─ ⭐ Buff: Tăng sát thương và chí mạng\n`;
           }
         }
         
         embed.addFields({
           name: `🔒 Kỹ năng chưa học (${unlearnedSkills.length})`,
-          value: unlearnedText,
+          value: unlearnedText || '*Không có*',
           inline: false
         });
       }
     } else {
       embed.addFields({
-        name: '🎯 Danh sách kỹ năng',
+        name: '📋 Danh sách kỹ năng',
         value: '*Chưa có kỹ năng! Hãy lên cấp để mở khóa.*',
         inline: false
       });

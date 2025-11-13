@@ -60,16 +60,18 @@ export const inventoryCommand: Command = {
     }, {});
 
     for (const [typeName, typeItems] of Object.entries(itemsByType)) {
-      const itemList = (typeItems as any[]).map(item => {
-        let info = `${item.equipped ? '✅' : '⬜'} **${item.name}** x\`${item.quantity}\``;
+      const itemList = (typeItems as any[]).map((item, idx, arr) => {
+        const isLast = idx === arr.length - 1;
+        const prefix = isLast ? '╰─' : '├─';
+        let info = `${prefix} ${item.equipped ? '✅' : '⬜'} **${item.name}** x\`${item.quantity}\``;
         const stats = [];
-        if (item.hp_bonus > 0) stats.push(`HP+${item.hp_bonus}`);
-        if (item.ki_bonus > 0) stats.push(`KI+${item.ki_bonus}`);
-        if (item.attack_bonus > 0) stats.push(`ATK+${item.attack_bonus}`);
-        if (item.defense_bonus > 0) stats.push(`DEF+${item.defense_bonus}`);
-        if (item.speed_bonus > 0) stats.push(`SPD+${item.speed_bonus}`);
+        if (item.hp_bonus > 0) stats.push(`❤️ +${item.hp_bonus}`);
+        if (item.ki_bonus > 0) stats.push(`💙 +${item.ki_bonus}`);
+        if (item.attack_bonus > 0) stats.push(`⚔️ +${item.attack_bonus}`);
+        if (item.defense_bonus > 0) stats.push(`🛡️ +${item.defense_bonus}`);
+        if (item.speed_bonus > 0) stats.push(`⚡ +${item.speed_bonus}`);
         if (stats.length > 0) {
-          info += ` *(${stats.join(', ')})*`;
+          info += `\n   ${stats.join(' • ')}`;
         }
         return info;
       }).join('\n');

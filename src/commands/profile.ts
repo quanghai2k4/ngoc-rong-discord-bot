@@ -32,22 +32,48 @@ export const profileCommand: Command = {
     const race = await CharacterService.getRaceById(character.race_id);
     const expNeeded = 100 + (character.level - 1) * 50;
 
+    // Tính progress bars
+    const hpPercentage = Math.floor((character.hp / character.max_hp) * 10);
+    const hpBar = '█'.repeat(hpPercentage) + '░'.repeat(10 - hpPercentage);
+    
+    const kiPercentage = Math.floor((character.ki / character.max_ki) * 10);
+    const kiBar = '█'.repeat(kiPercentage) + '░'.repeat(10 - kiPercentage);
+    
+    const expPercentage = Math.floor((character.experience / expNeeded) * 10);
+    const expBar = '█'.repeat(expPercentage) + '░'.repeat(10 - expPercentage);
+
     const embed = new EmbedBuilder()
       .setColor(0x00FF00)
       .setTitle(`⚔️ ${character.name}`)
-      .setDescription(`Chủng tộc: **${race?.name}**`)
+      .setDescription(
+        `**${race?.name}** • Level **${character.level}** • 💰 **${character.gold}** vàng\n` +
+        `╰─ 📍 ${character.location}`
+      )
       .addFields(
-        { name: '📊 Level', value: `**\`${character.level}\`**`, inline: true },
-        { name: '✨ EXP', value: `**\`${character.experience}\`** / \`${expNeeded}\``, inline: true },
-        { name: '💰 Vàng', value: `**\`${character.gold}\`**`, inline: true },
-        { name: '❤️ HP', value: `**\`${character.hp}\`** / \`${character.max_hp}\``, inline: true },
-        { name: '💙 KI', value: `**\`${character.ki}\`** / \`${character.max_ki}\``, inline: true },
-        { name: '⚡ Speed', value: `**\`${character.speed}\`**`, inline: true },
-        { name: '⚔️ Attack', value: `**\`${character.attack}\`**`, inline: true },
-        { name: '🛡️ Defense', value: `**\`${character.defense}\`**`, inline: true },
-        { name: '💥 Crit', value: `**\`${character.critical_chance}%\`** (x\`${character.critical_damage}\`)`, inline: true },
-        { name: '💨 Dodge', value: `**\`${character.dodge_chance}%\`**`, inline: true },
-        { name: '📍 Vị trí', value: `**${character.location}**`, inline: true }
+        {
+          name: '❤️ HP',
+          value: `\`${character.hp}\`/\`${character.max_hp}\` ${hpBar}`,
+          inline: false
+        },
+        {
+          name: '💙 KI',
+          value: `\`${character.ki}\`/\`${character.max_ki}\` ${kiBar}`,
+          inline: false
+        },
+        {
+          name: '✨ EXP',
+          value: `\`${character.experience}\`/\`${expNeeded}\` ${expBar}`,
+          inline: false
+        },
+        {
+          name: '⚔️ Combat Stats',
+          value: 
+            `╭─ ⚔️ ATK: **${character.attack}** • 🛡️ DEF: **${character.defense}**\n` +
+            `├─ ⚡ SPD: **${character.speed}**\n` +
+            `├─ 💥 Crit: **${character.critical_chance}%** (x**${character.critical_damage}**)\n` +
+            `╰─ 💨 Dodge: **${character.dodge_chance}%**`,
+          inline: false
+        }
       )
       .setTimestamp()
       .setFooter({ text: `ID: ${character.id}` });
