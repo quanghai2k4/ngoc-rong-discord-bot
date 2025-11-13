@@ -73,10 +73,10 @@ export const huntCommand: Command = {
         battleLog += `│ ${round.monsterAction}\n`;
         
         // Progress bars cho HP của cả 2 bên
-        const charHpPerc = Math.floor((round.characterHp / character.max_hp) * 5);
+        const charHpPerc = Math.max(0, Math.floor((round.characterHp / character.max_hp) * 5));
         const charHpBar = '█'.repeat(charHpPerc) + '░'.repeat(5 - charHpPerc);
         
-        const monHpPerc = Math.floor((round.monsterHp / monster.hp) * 5);
+        const monHpPerc = Math.max(0, Math.floor((round.monsterHp / monster.hp) * 5));
         const monHpBar = '█'.repeat(monHpPerc) + '░'.repeat(5 - monHpPerc);
         
         battleLog += `╰─ ❤️ Bạn: ${charHpBar} \`${round.characterHp}\` | Quái: ${monHpBar} \`${round.monsterHp}\`\n\n`;
