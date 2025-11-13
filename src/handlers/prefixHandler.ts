@@ -238,7 +238,7 @@ async function handleHunt(message: Message) {
     })
     .setFooter({ text: '⏳ Đang chiến đấu...' });
 
-  await message.reply({ embeds: [startEmbed] });
+  const battleMessage = await message.reply({ embeds: [startEmbed] });
 
   setTimeout(async () => {
     const result = await BattleService.battle(character, monster);
@@ -303,7 +303,7 @@ async function handleHunt(message: Message) {
       });
     }
 
-    await message.reply({ embeds: [resultEmbed] });
+    await battleMessage.edit({ embeds: [resultEmbed] });
 
     // Gửi level up notification riêng biệt
     if (result.won && result.leveledUp) {

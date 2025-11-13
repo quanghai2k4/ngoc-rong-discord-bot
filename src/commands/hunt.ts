@@ -118,7 +118,7 @@ export const huntCommand: Command = {
         });
       }
 
-      await interaction.followUp({ embeds: [resultEmbed] });
+      await interaction.editReply({ embeds: [resultEmbed] });
 
       // Gửi tin nhắn level up riêng nếu có
       if (result.won && result.leveledUp) {
