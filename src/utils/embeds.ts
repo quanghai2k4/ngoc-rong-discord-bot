@@ -226,23 +226,27 @@ export function createInventoryEmbed(
     (typeItems as any[]).forEach((item, idx, arr) => {
       const isLast = idx === arr.length - 1;
       const prefix = isLast ? '╰─' : '├─';
-      itemText += `${prefix} ${item.equipped ? '✅' : '⬜'} **${item.name}** x\`${item.quantity}\`\n`;
+      const connector = isLast ? '  ' : '│ ';
       
+      // Item name line với markdown
+      itemText += `${prefix} ${item.equipped ? '✅' : '⬜'} \`${item.name}\` **×${item.quantity}**\n`;
+      
+      // Stats line (nếu có)
       const stats = [];
-      if (item.hp_bonus > 0) stats.push(`❤️ +${item.hp_bonus}`);
-      if (item.ki_bonus > 0) stats.push(`💙 +${item.ki_bonus}`);
-      if (item.attack_bonus > 0) stats.push(`⚔️ +${item.attack_bonus}`);
-      if (item.defense_bonus > 0) stats.push(`🛡️ +${item.defense_bonus}`);
-      if (item.speed_bonus > 0) stats.push(`⚡ +${item.speed_bonus}`);
+      if (item.hp_bonus > 0) stats.push(`❤️ **+${item.hp_bonus}**`);
+      if (item.ki_bonus > 0) stats.push(`💙 **+${item.ki_bonus}**`);
+      if (item.attack_bonus > 0) stats.push(`⚔️ **+${item.attack_bonus}**`);
+      if (item.defense_bonus > 0) stats.push(`🛡️ **+${item.defense_bonus}**`);
+      if (item.speed_bonus > 0) stats.push(`⚡ **+${item.speed_bonus}**`);
       
       if (stats.length > 0) {
-        itemText += `   ${stats.join(' • ')}\n`;
+        itemText += `${connector} *${stats.join(' • ')}*\n`;
       }
     });
     
     embed.addFields({
       name: `📦 ${typeName}`,
-      value: itemText,
+      value: itemText.trim(),
       inline: false
     });
   }
