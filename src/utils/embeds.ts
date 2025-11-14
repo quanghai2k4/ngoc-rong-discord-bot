@@ -191,142 +191,67 @@ export function createBossMenuEmbed(character: Character): EmbedBuilder {
 }
 
 /**
- * Tạo embed cho inventory với Terminal UI style
+ * Tạo embed cho inventory
  */
 export function createInventoryEmbed(
   character: Character,
   items: any[]
 ): EmbedBuilder {
-  // Cấu hình layout
-  const INNER_WIDTH = 58;
-  const LEFT_COL = 26;   // inventory
-  const RIGHT_COL = 26;  // status
-
-  const pad = (str: string, len: number): string => {
-    str = String(str);
-    if (str.length > len) return str.slice(0, len);
-    return str + ' '.repeat(len - str.length);
-  };
-
-  const rowFull = (text = ''): string => {
-    let row = String(text);
-    if (row.length > INNER_WIDTH) row = row.slice(0, INNER_WIDTH);
-    if (row.length < INNER_WIDTH) row += ' '.repeat(INNER_WIDTH - row.length);
-    return `║${row}║`;
-  };
-
-  const rowTwoCol = (left = '', right = ''): string => {
-    const l = pad(left, LEFT_COL);
-    const r = pad(right, RIGHT_COL);
-    let row = `${l} │ ${r}`;
-    if (row.length < INNER_WIDTH) {
-      row += ' '.repeat(INNER_WIDTH - row.length);
-    } else if (row.length > INNER_WIDTH) {
-      row = row.slice(0, INNER_WIDTH);
-    }
-    return `║${row}║`;
-  };
-
-  const topBorder = () => '╔' + '═'.repeat(INNER_WIDTH) + '╗';
-  const midSplitTop = () => '╠' + '═'.repeat(28) + '╦' + '═'.repeat(29) + '╣';
-  const midSplitBot = () => '╠' + '═'.repeat(28) + '╩' + '═'.repeat(29) + '╣';
-  const bottomBorder = () => '╚' + '═'.repeat(INNER_WIDTH) + '╝';
-
-  // Build content
-  const lines: string[] = [];
-
-  // Header
-  lines.push(topBorder());
-  lines.push(rowTwoCol('NGỌC RỒNG RPG v2.0', `${character.name}@Lv.${character.level}`));
-  lines.push(midSplitTop());
-
-  // Column headers
-  lines.push(rowTwoCol('TÚI ĐỒ', 'THÔNG TIN'));
-
-  // Build inventory items
-  const invItems = items.length
-    ? items.map((item) => {
-        const equipped = item.equipped ? '[✓]' : '[ ]';
-        let label = `${equipped} ${item.name}`;
-        if (item.quantity > 1) label += ` x${item.quantity}`;
-        
-        // Stats
-        const stats: string[] = [];
-        if (item.hp_bonus > 0) stats.push(`HP+${item.hp_bonus}`);
-        if (item.ki_bonus > 0) stats.push(`KI+${item.ki_bonus}`);
-        if (item.attack_bonus > 0) stats.push(`ATK+${item.attack_bonus}`);
-        if (item.defense_bonus > 0) stats.push(`DEF+${item.defense_bonus}`);
-        if (item.speed_bonus > 0) stats.push(`SPD+${item.speed_bonus}`);
-        
-        return {
-          label: label.length > 24 ? label.slice(0, 21) + '...' : label,
-          stats: stats.length > 0 ? stats.join(' ') : null
-        };
-      })
-    : [{ label: '(Túi đồ trống)', stats: null }];
-
-  // Build status lines
-  const hpPercent = Math.floor((character.hp / character.max_hp) * 10);
-  const kiPercent = Math.floor((character.ki / character.max_ki) * 10);
-  const hpBar = '█'.repeat(hpPercent) + '░'.repeat(10 - hpPercent);
-  const kiBar = '█'.repeat(kiPercent) + '░'.repeat(10 - kiPercent);
-
-  const expNeeded = 100 + (character.level - 1) * 50;
-  const expPercent = Math.floor((character.experience / expNeeded) * 10);
-  const expBar = '▓'.repeat(expPercent) + '░'.repeat(10 - expPercent);
-
-  const statusLines = [
-    `Cấp độ: ${character.level}`,
-    `EXP   : [${expBar}]`,
-    '',
-    `HP    : [${hpBar}]`,
-    `       ${character.hp}/${character.max_hp}`,
-    `KI    : [${kiBar}]`,
-    `       ${character.ki}/${character.max_ki}`,
-    '',
-    `⚔️  ATK: ${character.attack}`,
-    `🛡️  DEF: ${character.defense}`,
-    `⚡ SPD: ${character.speed}`,
-    `💰 Gold: ${character.gold}`,
-  ];
-
-  // Flatten inventory into display lines
-  const invLines: string[] = [];
-  for (const item of invItems) {
-    invLines.push(item.label);
-    if (item.stats) {
-      invLines.push(`  ${item.stats}`);
-    } else {
-      invLines.push(''); // Empty line nếu không có stats
-    }
-  }
-
-  // Render rows
-  const maxRows = Math.max(invLines.length, statusLines.length);
-  
-  for (let i = 0; i < maxRows; i++) {
-    const leftText = invLines[i] || '';
-    const rightText = statusLines[i] || '';
-    lines.push(rowTwoCol(leftText, rightText));
-  }
-
-  // Split bottom
-  lines.push(midSplitBot());
-
-  // Location section
-  lines.push(rowFull('VỊ TRÍ'));
-  lines.push(rowFull(`📍 ${character.location}`));
-
-  lines.push(bottomBorder());
-
-  const ascii = lines.join('\n');
-
-  return new EmbedBuilder()
+  const embed = new EmbedBuilder()
     .setColor(UI_CONFIG.COLORS.SUCCESS)
-    .setTitle('🎮 Terminal Inventory UI')
-    .setDescription('```\n' + ascii + '\n```')
-    .setFooter({ text: 'Sử dụng zinv để xem túi đồ' })
-    .setTimestamp();
+    .setTitle(`🎒 Túi đồ của ${character.name}`)
+    .setDescription(`💰 Vàng: **\`${character.gold}\`**`);
+
+  if (items.length === 0) {
+    embed.addFields({
+      name: '📦 Túi đồ',
+      value: '*❌ Túi đồ trống!*',
+      inline: false
+    });
+    return embed;
+  }
+
+  // Group items by type
+  const itemsByType = items.reduce((acc: any, item: any) => {
+    if (!acc[item.type_name]) {
+      acc[item.type_name] = [];
+    }
+    acc[item.type_name].push(item);
+    return acc;
+  }, {});
+
+  // Format each type
+  for (const [typeName, typeItems] of Object.entries(itemsByType)) {
+    let itemText = '';
+    (typeItems as any[]).forEach((item, idx, arr) => {
+      const isLast = idx === arr.length - 1;
+      const prefix = isLast ? '╰─' : '├─';
+      const connector = isLast ? '  ' : '│ ';
+      
+      // Item name line với markdown
+      itemText += `${prefix} ${item.equipped ? '✅' : '⬜'} \`${item.name}\` **×${item.quantity}**\n`;
+      
+      // Stats line (nếu có)
+      const stats = [];
+      if (item.hp_bonus > 0) stats.push(`❤️ **+${item.hp_bonus}**`);
+      if (item.ki_bonus > 0) stats.push(`💙 **+${item.ki_bonus}**`);
+      if (item.attack_bonus > 0) stats.push(`⚔️ **+${item.attack_bonus}**`);
+      if (item.defense_bonus > 0) stats.push(`🛡️ **+${item.defense_bonus}**`);
+      if (item.speed_bonus > 0) stats.push(`⚡ **+${item.speed_bonus}**`);
+      
+      if (stats.length > 0) {
+        itemText += `${connector} *${stats.join(' • ')}*\n`;
+      }
+    });
+    
+    embed.addFields({
+      name: `📦 ${typeName}`,
+      value: itemText.trim(),
+      inline: false
+    });
+  }
+
+  return embed;
 }
 
 /**
