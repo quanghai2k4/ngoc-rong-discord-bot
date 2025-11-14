@@ -226,12 +226,8 @@ export function createInventoryEmbed(
     (typeItems as any[]).forEach((item, idx, arr) => {
       const isLast = idx === arr.length - 1;
       const prefix = isLast ? '╰─' : '├─';
-      const connector = isLast ? '  ' : '│ ';
       
-      // Item name line với markdown
-      itemText += `${prefix} ${item.equipped ? '✅' : '⬜'} \`${item.name}\` **×${item.quantity}**\n`;
-      
-      // Stats line (nếu có)
+      // Stats (nếu có)
       const stats = [];
       if (item.hp_bonus > 0) stats.push(`❤️ **+${item.hp_bonus}**`);
       if (item.ki_bonus > 0) stats.push(`💙 **+${item.ki_bonus}**`);
@@ -239,9 +235,12 @@ export function createInventoryEmbed(
       if (item.defense_bonus > 0) stats.push(`🛡️ **+${item.defense_bonus}**`);
       if (item.speed_bonus > 0) stats.push(`⚡ **+${item.speed_bonus}**`);
       
+      // Item line: name + quantity + stats (tất cả cùng 1 dòng)
+      let line = `${prefix} ${item.equipped ? '✅' : '⬜'} \`${item.name}\` **×${item.quantity}**`;
       if (stats.length > 0) {
-        itemText += `${connector} *${stats.join(' • ')}*\n`;
+        line += ` • *${stats.join(' • ')}*`;
       }
+      itemText += line + '\n';
     });
     
     embed.addFields({
