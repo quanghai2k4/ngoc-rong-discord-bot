@@ -327,6 +327,8 @@ async function handleBoss(message: Message) {
         id: selectedBossData.id,
         name: selectedBossData.name,
         level: bossLevel,
+        min_level: selectedBossData.min_level,
+        max_level: selectedBossData.max_level,
         hp: selectedBossData.hp + (bossLevel - selectedBossData.min_level) * 50,
         maxHp: selectedBossData.hp + (bossLevel - selectedBossData.min_level) * 50,
         attack: selectedBossData.attack + (bossLevel - selectedBossData.min_level) * 5,

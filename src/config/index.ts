@@ -82,6 +82,7 @@ export const CACHE_CONFIG = {
   RACES_TTL: 5 * 60 * 1000, // 5 minutes
   ITEMS_TTL: 10 * 60 * 1000, // 10 minutes
   SKILLS_TTL: 10 * 60 * 1000, // 10 minutes
+  STATIC_DATA_TTL: 30 * 60 * 1000, // 30 minutes - reload game data cache
 } as const;
 
 // Locations

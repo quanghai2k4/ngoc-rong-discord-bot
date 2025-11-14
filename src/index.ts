@@ -8,6 +8,7 @@ import {
 } from 'discord.js';
 import dotenv from 'dotenv';
 import { pool } from './database/db';
+import { gameDataCache } from './services/GameDataCache';
 
 dotenv.config();
 
@@ -44,6 +45,14 @@ commands.set('skills', skillsCommand);
 
 client.once('ready', async () => {
   console.log(`Bot đã sẵn sàng! Đăng nhập với tên ${client.user?.tag}`);
+  
+  // Initialize game data cache
+  try {
+    await gameDataCache.initialize();
+  } catch (error) {
+    console.error('❌ Không thể load game data cache! Bot sẽ tắt.');
+    process.exit(1);
+  }
   
   // Register slash commands
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN!);

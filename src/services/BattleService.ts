@@ -218,6 +218,8 @@ export class BattleService {
 
     if (won) {
       // Cộng dồn rewards từ tất cả quái bị đánh bại
+      const battleLogValues: any[] = [];
+      
       for (const monsterInst of monsterInstances) {
         if (!monsterInst.isAlive) {
           expGained += monsterInst.monster.experience_reward;
@@ -232,13 +234,29 @@ export class BattleService {
             }
           }
 
-          // Log battle cho từng quái
-          await query(
-            `INSERT INTO battle_logs (character_id, monster_id, won, experience_gained, gold_gained) 
-             VALUES ($1, $2, $3, $4, $5)`,
-            [character.id, monsterInst.monster.id, true, monsterInst.monster.experience_reward, monsterInst.monster.gold_reward]
-          );
+          // Collect battle log data (sẽ insert batch sau)
+          battleLogValues.push([
+            character.id, 
+            monsterInst.monster.id, 
+            true, 
+            monsterInst.monster.experience_reward, 
+            monsterInst.monster.gold_reward
+          ]);
         }
+      }
+
+      // Batch insert battle logs (1 query thay vì N queries)
+      if (battleLogValues.length > 0) {
+        const placeholders = battleLogValues
+          .map((_, i) => `($${i * 5 + 1}, $${i * 5 + 2}, $${i * 5 + 3}, $${i * 5 + 4}, $${i * 5 + 5})`)
+          .join(', ');
+        const flatValues = battleLogValues.flat();
+        
+        await query(
+          `INSERT INTO battle_logs (character_id, monster_id, won, experience_gained, gold_gained) 
+           VALUES ${placeholders}`,
+          flatValues
+        );
       }
 
       // Update character
@@ -509,21 +527,14 @@ export class BattleService {
     itemId: number,
     quantity: number
   ): Promise<void> {
-    const existing = await query(
-      'SELECT * FROM character_items WHERE character_id = $1 AND item_id = $2',
-      [characterId, itemId]
+    // Sử dụng UPSERT (INSERT ... ON CONFLICT) thay vì SELECT + UPDATE/INSERT
+    // Giảm từ 2 queries xuống 1 query, nhanh hơn và tránh race condition
+    await query(
+      `INSERT INTO character_items (character_id, item_id, quantity) 
+       VALUES ($1, $2, $3)
+       ON CONFLICT (character_id, item_id) 
+       DO UPDATE SET quantity = character_items.quantity + $3`,
+      [characterId, itemId, quantity]
     );
-
-    if (existing.rows.length > 0) {
-      await query(
-        'UPDATE character_items SET quantity = quantity + $1 WHERE character_id = $2 AND item_id = $3',
-        [quantity, characterId, itemId]
-      );
-    } else {
-      await query(
-        'INSERT INTO character_items (character_id, item_id, quantity) VALUES ($1, $2, $3)',
-        [characterId, itemId, quantity]
-      );
-    }
   }
 }

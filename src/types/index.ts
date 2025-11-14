@@ -72,6 +72,8 @@ export interface Monster {
   speed: number;
   experience_reward: number;
   gold_reward: number;
+  min_level: number;
+  max_level: number;
   location: string;
   critical_chance: number;
   critical_damage: number;

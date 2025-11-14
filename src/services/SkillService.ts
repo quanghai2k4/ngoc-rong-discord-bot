@@ -1,5 +1,6 @@
 import { query } from '../database/db';
 import { Skill } from '../types';
+import { gameDataCache } from './GameDataCache';
 
 export class SkillService {
   // Lấy tất cả skills của một character
@@ -54,30 +55,14 @@ export class SkillService {
     return result.rows.length > 0;
   }
 
-  // Lấy skill by ID
+  // Lấy skill by ID - sử dụng cache
   static async getSkillById(skillId: number): Promise<Skill | null> {
-    const result = await query(
-      `SELECT id, name, description, skill_type, race_id, required_level,
-              ki_cost, cooldown, damage_multiplier, heal_amount, crit_bonus,
-              stun_chance, defense_break, is_aoe
-       FROM skills WHERE id = $1`,
-      [skillId]
-    );
-    return result.rows[0] || null;
+    return gameDataCache.getSkillById(skillId) || null;
   }
 
-  // Lấy skills của monster
+  // Lấy skills của monster - sử dụng cache
   static async getMonsterSkills(monsterId: number): Promise<Array<Skill & { use_probability: number }>> {
-    const result = await query(
-      `SELECT s.id, s.name, s.description, s.skill_type, s.race_id, s.required_level,
-              s.ki_cost, s.cooldown, s.damage_multiplier, s.heal_amount, s.crit_bonus,
-              s.stun_chance, s.defense_break, s.is_aoe, ms.use_probability 
-       FROM skills s
-       JOIN monster_skills ms ON s.id = ms.skill_id
-       WHERE ms.monster_id = $1`,
-      [monsterId]
-    );
-    return result.rows;
+    return gameDataCache.getMonsterSkills(monsterId);
   }
 
   // Lấy TẤT CẢ skills theo race (đã học và chưa học)
@@ -96,26 +81,21 @@ export class SkillService {
     return result.rows;
   }
 
-  // Auto-learn basic skills khi tạo character
+  // Auto-learn basic skills khi tạo character - sử dụng cache
   static async autoLearnBasicSkills(characterId: number, raceId: number): Promise<void> {
     // Học Ki Blast (universal skill level 1)
-    const kiBlast = await query(
-      'SELECT id FROM skills WHERE name = $1 AND required_level = 1',
-      ['Ki Blast']
-    );
+    const kiBlast = gameDataCache.getSkillByName('Ki Blast');
     
-    if (kiBlast.rows[0]) {
-      await this.learnSkill(characterId, kiBlast.rows[0].id);
+    if (kiBlast && kiBlast.required_level === 1) {
+      await this.learnSkill(characterId, kiBlast.id);
     }
 
-    // Học skill đặc trưng của race nếu có (level 1)
-    const raceSkills = await query(
-      'SELECT id FROM skills WHERE race_id = $1 AND required_level <= 3 ORDER BY required_level LIMIT 1',
-      [raceId]
-    );
+    // Học skill đặc trưng của race nếu có (level 1-3)
+    const raceSkills = gameDataCache.getSkillsByRace(raceId, 3);
+    const firstSkill = raceSkills.sort((a, b) => a.required_level - b.required_level)[0];
 
-    if (raceSkills.rows[0]) {
-      await this.learnSkill(characterId, raceSkills.rows[0].id);
+    if (firstSkill) {
+      await this.learnSkill(characterId, firstSkill.id);
     }
   }
 }

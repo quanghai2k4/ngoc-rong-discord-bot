@@ -97,6 +97,8 @@ export const bossCommand: Command = {
         speed: selectedBossData.speed + (bossLevel - selectedBossData.min_level) * 2,
         experience_reward: selectedBossData.experience_reward || 100,
         gold_reward: selectedBossData.gold_reward || 200,
+        min_level: selectedBossData.min_level,
+        max_level: selectedBossData.max_level,
         location: newLocation,
         critical_chance: selectedBossData.critical_chance || 3,
         critical_damage: selectedBossData.critical_damage || 1.3,

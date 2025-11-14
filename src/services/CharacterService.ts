@@ -1,7 +1,7 @@
 import { query } from '../database/db';
 import { Character, CharacterRace } from '../types';
 import { SkillService } from './SkillService';
-import { cacheService } from './CacheService';
+import { gameDataCache } from './GameDataCache';
 import { STARTING_HP, STARTING_KI, STARTING_ATTACK, STARTING_DEFENSE } from '../utils/constants';
 import { GAME_CONFIG, getRandomLocation, isBossOnlyLocation, getRequiredExp } from '../config';
 
@@ -66,13 +66,13 @@ export class CharacterService {
   }
 
   static async getAllRaces(): Promise<CharacterRace[]> {
-    // Dùng cache thay vì query trực tiếp
-    return cacheService.getAllRaces();
+    // Dùng GameDataCache thay vì CacheService
+    return gameDataCache.getAllRaces();
   }
 
   static async getRaceById(raceId: number): Promise<CharacterRace | null> {
-    // Dùng cache thay vì query trực tiếp
-    return cacheService.getRaceById(raceId);
+    // Dùng GameDataCache thay vì CacheService
+    return gameDataCache.getRaceById(raceId) || null;
   }
 
   static async updateStats(characterId: number, stats: Partial<Character>): Promise<void> {
