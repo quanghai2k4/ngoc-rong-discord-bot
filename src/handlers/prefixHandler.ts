@@ -205,7 +205,16 @@ async function handleHunt(message: Message) {
         // Nếu là quái thường, thêm summary vào description
         let summaryDescription = '';
         if (!hasBoss) {
-          summaryDescription = createHuntSummary(result.won, monsters, result.rounds.length);
+          // Lấy HP cuối cùng từ round cuối
+          const finalRound = result.rounds[result.rounds.length - 1];
+          summaryDescription = createHuntSummary(
+            result.won, 
+            monsters, 
+            result.rounds.length,
+            finalRound?.characterHp,
+            character.max_hp,
+            finalRound?.monsterStates
+          );
         }
 
         // Tạo result embed
@@ -416,8 +425,8 @@ async function handleBoss(message: Message) {
       // Archive và lock thread sau 10 giây
       setTimeout(async () => {
         try {
-          await thread.setArchived(true);
-          await thread.setLocked(true);
+          // Phải set archived và locked cùng lúc để tránh lỗi 50083
+          await thread.edit({ archived: true, locked: true });
         } catch (error) {
           console.error('[handleBoss] Lỗi khi archive thread:', error);
         }

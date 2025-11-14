@@ -185,9 +185,6 @@ export class BattleService {
       // Regen KI mỗi turn
       charKi = Math.min(character.max_ki, charKi + 10);
 
-      // Debug: log actions array
-      console.log(`Round ${roundNumber} - actions:`, actions);
-
       // Lưu round
       rounds.push({
         round: roundNumber,

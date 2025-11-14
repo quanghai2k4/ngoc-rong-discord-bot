@@ -48,7 +48,16 @@ export const huntCommand: Command = {
           // Nếu là quái thường, thêm summary vào description
           let summaryDescription = '';
           if (!hasBoss) {
-            summaryDescription = createHuntSummary(result.won, monsters, result.rounds.length);
+            // Lấy HP cuối cùng từ round cuối
+            const finalRound = result.rounds[result.rounds.length - 1];
+            summaryDescription = createHuntSummary(
+              result.won, 
+              monsters, 
+              result.rounds.length,
+              finalRound?.characterHp,
+              character.max_hp,
+              finalRound?.monsterStates
+            );
           }
 
           // Tạo result embed

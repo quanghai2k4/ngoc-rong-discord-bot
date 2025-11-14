@@ -128,14 +128,76 @@ export function createBattleLog(
 export function createHuntSummary(
   won: boolean,
   monsters: Monster[],
-  totalRounds: number
+  totalRounds: number,
+  finalCharHp?: number,
+  finalCharMaxHp?: number,
+  finalMonsterStates?: Array<{ name: string; hp: number; maxHp: number }>
 ): string {
+  // Box drawing characters
+  const BOX = {
+    topLeft: '╭',
+    topRight: '╮',
+    bottomLeft: '╰',
+    bottomRight: '╯',
+    horizontal: '─',
+    vertical: '│',
+    divider: '├',
+    dividerRight: '┤'
+  };
+
+  let summary = '';
+
   if (won) {
     const monsterNames = monsters.map(m => m.name).join(', ');
-    let summary = `⚔️ Bạn đã **kết liễu** ${monsters.length > 1 ? `**${monsters.length} quái**: ` : ''}**${monsterNames}**!\n\n`;
-    summary += `⏱️ Chiến đấu kết thúc sau **${totalRounds}** hiệp`;
-    return summary;
+    summary += `${BOX.topLeft}${BOX.horizontal.repeat(38)}${BOX.topRight}\n`;
+    summary += `${BOX.vertical} ⚔️  **CHIẾN THẮNG!**                    ${BOX.vertical}\n`;
+    summary += `${BOX.divider}${BOX.horizontal.repeat(38)}${BOX.dividerRight}\n`;
+    summary += `${BOX.vertical} 🎯 Tiêu diệt: **${monsters.length > 1 ? `${monsters.length} quái` : monsterNames}**\n`;
+    summary += `${BOX.vertical} ⏱️  Thời gian: **${totalRounds} hiệp**\n`;
+    
+    // Hiển thị HP bars nếu có data
+    if (finalCharHp !== undefined && finalCharMaxHp !== undefined) {
+      summary += `${BOX.divider}${BOX.horizontal.repeat(38)}${BOX.dividerRight}\n`;
+      const charHpBar = formatHpBar(finalCharHp, finalCharMaxHp, 15);
+      const hpPercent = Math.round((finalCharHp / finalCharMaxHp) * 100);
+      summary += `${BOX.vertical} ❤️  HP: ${charHpBar} ${hpPercent}%\n`;
+      summary += `${BOX.vertical}     \`${finalCharHp}/${finalCharMaxHp}\`\n`;
+    }
+    
+    // Hiển thị monster HP (defeated)
+    if (finalMonsterStates && finalMonsterStates.length > 0) {
+      for (const mon of finalMonsterStates.slice(0, 3)) { // Max 3 monsters
+        const monHpBar = formatHpBar(0, mon.maxHp, 15);
+        summary += `${BOX.vertical} 💀 ${mon.name}: ${monHpBar} 0%\n`;
+      }
+    }
+    
+    summary += `${BOX.bottomLeft}${BOX.horizontal.repeat(38)}${BOX.bottomRight}`;
   } else {
-    return `💀 Bạn đã bị đánh bại sau **${totalRounds}** hiệp chiến đấu`;
+    summary += `${BOX.topLeft}${BOX.horizontal.repeat(38)}${BOX.topRight}\n`;
+    summary += `${BOX.vertical} 💀 **THẤT BẠI!**                       ${BOX.vertical}\n`;
+    summary += `${BOX.divider}${BOX.horizontal.repeat(38)}${BOX.dividerRight}\n`;
+    summary += `${BOX.vertical} ⏱️  Tồn tại: **${totalRounds} hiệp**\n`;
+    
+    // Hiển thị HP bars (character died)
+    if (finalCharHp !== undefined && finalCharMaxHp !== undefined) {
+      summary += `${BOX.divider}${BOX.horizontal.repeat(38)}${BOX.dividerRight}\n`;
+      const charHpBar = formatHpBar(0, finalCharMaxHp, 15);
+      summary += `${BOX.vertical} ❤️  HP: ${charHpBar} 0%\n`;
+      summary += `${BOX.vertical}     \`0/${finalCharMaxHp}\`\n`;
+    }
+    
+    // Hiển thị monster HP (survivors)
+    if (finalMonsterStates && finalMonsterStates.length > 0) {
+      for (const mon of finalMonsterStates.slice(0, 3)) {
+        const monHpBar = formatHpBar(mon.hp, mon.maxHp, 15);
+        const hpPercent = Math.round((mon.hp / mon.maxHp) * 100);
+        summary += `${BOX.vertical} 🔥 ${mon.name}: ${monHpBar} ${hpPercent}%\n`;
+      }
+    }
+    
+    summary += `${BOX.bottomLeft}${BOX.horizontal.repeat(38)}${BOX.bottomRight}`;
   }
+
+  return summary;
 }

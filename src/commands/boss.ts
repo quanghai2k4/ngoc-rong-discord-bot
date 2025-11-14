@@ -194,8 +194,8 @@ export const bossCommand: Command = {
       // Archive và lock thread sau 10 giây
       setTimeout(async () => {
         try {
-          await thread.setArchived(true);
-          await thread.setLocked(true);
+          // Phải set archived và locked cùng lúc để tránh lỗi 50083
+          await thread.edit({ archived: true, locked: true });
         } catch (error) {
           console.error('Lỗi khi archive thread:', error);
         }
