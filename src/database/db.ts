@@ -1,19 +1,14 @@
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
-import { 
-  DB_POOL_MAX_CONNECTIONS, 
-  DB_POOL_IDLE_TIMEOUT, 
-  DB_POOL_CONNECTION_TIMEOUT,
-  DB_SLOW_QUERY_THRESHOLD
-} from '../utils/constants';
+import { DB_CONFIG } from '../config';
 
 dotenv.config();
 
 export const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  max: DB_POOL_MAX_CONNECTIONS,
-  idleTimeoutMillis: DB_POOL_IDLE_TIMEOUT,
-  connectionTimeoutMillis: DB_POOL_CONNECTION_TIMEOUT,
+  max: DB_CONFIG.POOL.MAX,
+  idleTimeoutMillis: DB_CONFIG.POOL.IDLE_TIMEOUT,
+  connectionTimeoutMillis: DB_CONFIG.POOL.CONNECTION_TIMEOUT,
 });
 
 // Log query performance chỉ trong development
@@ -27,7 +22,7 @@ export async function query(text: string, params?: any[]) {
     
     if (isDev) {
       const duration = Date.now() - start;
-      if (duration > DB_SLOW_QUERY_THRESHOLD) {
+      if (duration > DB_CONFIG.QUERY.SLOW_QUERY_THRESHOLD) {
         console.log('⚠️  Slow query detected:', { text: text.substring(0, 80), duration, rows: res.rowCount });
       }
     }

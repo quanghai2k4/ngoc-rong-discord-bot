@@ -2,48 +2,22 @@ import { query } from '../database/db';
 import { Character, CharacterRace } from '../types';
 import { SkillService } from './SkillService';
 import { cacheService } from './CacheService';
-import { 
-  STARTING_HP, STARTING_KI, STARTING_ATTACK, STARTING_DEFENSE, 
-  HP_PER_LEVEL, KI_PER_LEVEL, ATTACK_PER_LEVEL, DEFENSE_PER_LEVEL, SPEED_PER_LEVEL,
-  BASE_EXP_PER_LEVEL, EXP_INCREASE_PER_LEVEL
-} from '../utils/constants';
-
-// Danh sách các vị trí trong thế giới Dragon Ball
-const NORMAL_LOCATIONS = [
-  'Sa Mạc',
-  'Căn Cứ RR',
-  'Cung Điện Piccolo',
-  'Hành Tinh Namek',
-  'Hành Tinh Vegeta',
-  'Trái Đất',
-  'Đền Thần',
-  'Phòng Thời Gian',
-  'Núi Paoz',
-  'Thành Phố Phía Tây',
-  'Vùng Đất Hoang',
-  'Kame House',
-];
-
-// Các khu vực đặc biệt chỉ có boss
-const BOSS_ONLY_LOCATIONS = [
-  'Rừng Karin',
-  'Tháp Karin',
-];
+import { STARTING_HP, STARTING_KI, STARTING_ATTACK, STARTING_DEFENSE } from '../utils/constants';
+import { GAME_CONFIG, getRandomLocation, isBossOnlyLocation, getRequiredExp } from '../config';
 
 export class CharacterService {
   /**
    * Lấy một vị trí ngẫu nhiên
    */
   static getRandomLocation(): string {
-    const allLocations = [...NORMAL_LOCATIONS, ...BOSS_ONLY_LOCATIONS];
-    return allLocations[Math.floor(Math.random() * allLocations.length)];
+    return getRandomLocation(false);
   }
 
   /**
    * Kiểm tra xem vị trí có phải là khu vực chỉ có boss không
    */
   static isBossOnlyLocation(location: string): boolean {
-    return BOSS_ONLY_LOCATIONS.includes(location);
+    return isBossOnlyLocation(location);
   }
   static async findByPlayerId(playerId: number): Promise<Character | null> {
     const result = await query(
@@ -133,22 +107,22 @@ export class CharacterService {
     let newDefense = character.defense;
     let newSpeed = character.speed;
     
-    // Level up calculation
-    let expNeeded = BASE_EXP_PER_LEVEL + (newLevel - 1) * EXP_INCREASE_PER_LEVEL;
+    // Level up calculation using GAME_CONFIG
+    let expNeeded = getRequiredExp(newLevel);
     
     while (newExp >= expNeeded) {
       newExp -= expNeeded;
       newLevel++;
       
       // Increase stats on level up
-      newMaxHp += HP_PER_LEVEL;
-      newMaxKi += KI_PER_LEVEL;
-      newAttack += ATTACK_PER_LEVEL;
-      newDefense += DEFENSE_PER_LEVEL;
-      newSpeed += SPEED_PER_LEVEL;
+      newMaxHp += GAME_CONFIG.LEVEL_UP.HP_BONUS;
+      newMaxKi += GAME_CONFIG.LEVEL_UP.KI_BONUS;
+      newAttack += GAME_CONFIG.LEVEL_UP.ATTACK_BONUS;
+      newDefense += GAME_CONFIG.LEVEL_UP.DEFENSE_BONUS;
+      newSpeed += GAME_CONFIG.LEVEL_UP.SPEED_BONUS;
       
       // Recalculate exp needed for next level
-      expNeeded = BASE_EXP_PER_LEVEL + (newLevel - 1) * EXP_INCREASE_PER_LEVEL;
+      expNeeded = getRequiredExp(newLevel);
     }
 
     // Single UPDATE query thay vì nhiều queries

@@ -1,6 +1,6 @@
 import { query } from '../database/db';
 import { CharacterRace } from '../types';
-import { CACHE_TTL } from '../utils/constants';
+import { CACHE_CONFIG } from '../config';
 
 /**
  * Cache service để cache dữ liệu tĩnh (races, items, skills)
@@ -17,7 +17,7 @@ class CacheService {
     const now = Date.now();
     
     // Nếu cache còn hạn, return cache
-    if (this.racesCache && (now - this.racesCacheTime) < CACHE_TTL) {
+    if (this.racesCache && (now - this.racesCacheTime) < CACHE_CONFIG.RACES_TTL) {
       return this.racesCache;
     }
 
