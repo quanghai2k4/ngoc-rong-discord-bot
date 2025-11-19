@@ -186,27 +186,28 @@ export function calculateBattleStats(
 }
 
 /**
- * Tạo HP bar với box drawing characters
+ * Tạo HP bar với gradient characters (giống hunt nhưng có gradient)
  */
-function createBoxHpBar(current: number, max: number, width: number = 20): string {
+function createGradientHpBar(current: number, max: number, width: number = 15): string {
   const percent = Math.max(0, Math.min(100, (current / max) * 100));
   const filled = Math.round((percent / 100) * width);
   const empty = width - filled;
   
-  // Chọn màu dựa trên HP%
+  // Gradient dựa trên HP%
   let fillChar = '█';
-  if (percent <= 25) fillChar = '░'; // Cực kỳ nguy hiểm
-  else if (percent <= 50) fillChar = '▒'; // Nguy hiểm
-  else if (percent <= 75) fillChar = '▓'; // Trung bình
+  if (percent <= 25) fillChar = '░'; // Critical
+  else if (percent <= 50) fillChar = '▒'; // Low
+  else if (percent <= 75) fillChar = '▓'; // Medium
+  // else: ██ Full
   
   const bar = fillChar.repeat(filled) + '░'.repeat(empty);
-  return `│${bar}│`;
+  return bar;
 }
 
 /**
  * Tạo progress bar cho battle round
  */
-function createProgressBar(current: number, total: number, width: number = 20): string {
+function createProgressBar(current: number, total: number, width: number = 30): string {
   const percent = Math.max(0, Math.min(100, (current / total) * 100));
   const filled = Math.round((percent / 100) * width);
   const empty = width - filled;
@@ -216,61 +217,76 @@ function createProgressBar(current: number, total: number, width: number = 20): 
 }
 
 /**
- * Create animated battle embed (updated mỗi round)
+ * Create animated battle embed (updated mỗi round) - Hunt style
  */
 export function createBattleLiveEmbed(
   state: BattleState,
   character: Character,
   boss: Monster
 ): EmbedBuilder {
-  const progress = (state.round / state.totalRounds) * 100;
   const charHpPercent = Math.round((state.characterHp / state.characterMaxHp) * 100);
   const bossHpPercent = Math.round((state.bossHp / state.bossMaxHp) * 100);
 
-  // Build description với box drawing
+  // Box drawing characters (rounded corners like hunt)
+  const BOX = {
+    topLeft: '╭',
+    topRight: '╮',
+    bottomLeft: '╰',
+    bottomRight: '╯',
+    horizontal: '─',
+    vertical: '│',
+    divider: '├',
+    dividerRight: '┤'
+  };
+
+  // Build description với hunt style
   let description = '';
   
-  // Header box
-  description += `╔═══════════════════════════════════╗\n`;
-  description += `║   ⚔️  HIỆP ${state.round}/${state.totalRounds}  •  ${progress.toFixed(0)}% Complete   ║\n`;
-  description += `╚═══════════════════════════════════╝\n\n`;
+  // Header
+  description += `${BOX.topLeft}${BOX.horizontal.repeat(38)}${BOX.topRight}\n`;
+  description += `${BOX.vertical} ⚔️  **HIỆP ${state.round}/${state.totalRounds}**\n`;
+  description += `${BOX.divider}${BOX.horizontal.repeat(38)}${BOX.dividerRight}\n`;
 
-  // Character status box
-  description += `┌─ 👤 ${character.name} (Lv.${character.level}) ${'─'.repeat(Math.max(0, 22 - character.name.length))}\n`;
-  description += `│ ❤️  HP: ${state.characterHp}/${state.characterMaxHp} (${charHpPercent}%)\n`;
-  description += `│ ${createBoxHpBar(state.characterHp, state.characterMaxHp, 25)}\n`;
-  description += `└${'─'.repeat(38)}\n\n`;
+  // Character HP
+  const charHpBar = createGradientHpBar(state.characterHp, state.characterMaxHp, 15);
+  description += `${BOX.vertical} ❤️  **${character.name}** (Lv.${character.level})\n`;
+  description += `${BOX.vertical}     ${charHpBar} ${charHpPercent}%\n`;
+  description += `${BOX.vertical}     \`${state.characterHp}/${state.characterMaxHp}\`\n`;
 
-  // Boss status box
-  description += `┌─ 👑 ${boss.name} (Lv.${boss.level}) ${'─'.repeat(Math.max(0, 22 - boss.name.length))}\n`;
-  description += `│ ❤️  HP: ${state.bossHp}/${state.bossMaxHp} (${bossHpPercent}%)\n`;
-  description += `│ ${createBoxHpBar(state.bossHp, state.bossMaxHp, 25)}\n`;
-  description += `└${'─'.repeat(38)}\n\n`;
+  // Boss HP
+  const bossHpBar = createGradientHpBar(state.bossHp, state.bossMaxHp, 15);
+  const bossStatus = state.bossHp === 0 ? '💀' : '👑';
+  description += `${BOX.vertical} ${bossStatus} **${boss.name}** (Lv.${boss.level})\n`;
+  description += `${BOX.vertical}     ${bossHpBar} ${bossHpPercent}%\n`;
+  description += `${BOX.vertical}     \`${state.bossHp}/${state.bossMaxHp}\`\n`;
 
-  // Recent actions box
+  // Recent actions
   if (state.lastActions.length > 0) {
-    description += `┌─ 📜 Diễn biến trận đấu ${'─'.repeat(15)}\n`;
+    description += `${BOX.divider}${BOX.horizontal.repeat(38)}${BOX.dividerRight}\n`;
+    description += `${BOX.vertical} 📜 **Diễn biến:**\n`;
     for (const action of state.lastActions.slice(-3)) {
-      description += `│ • ${action}\n`;
+      description += `${BOX.vertical} • ${action}\n`;
     }
-    description += `└${'─'.repeat(38)}\n`;
   }
 
-  // Highlights box
+  // Highlights
   if (state.highlights.length > 0) {
-    description += `\n┌─ ✨ Highlights ${'─'.repeat(21)}\n`;
+    description += `${BOX.divider}${BOX.horizontal.repeat(38)}${BOX.dividerRight}\n`;
+    description += `${BOX.vertical} ✨ **Highlights:**\n`;
     for (const highlight of state.highlights.slice(-2)) {
-      description += `│ ${highlight}\n`;
+      description += `${BOX.vertical} ${highlight}\n`;
     }
-    description += `└${'─'.repeat(38)}\n`;
   }
 
-  // Progress indicator
-  description += `\n${createProgressBar(state.round, state.totalRounds, 30)}\n`;
+  description += `${BOX.bottomLeft}${BOX.horizontal.repeat(38)}${BOX.bottomRight}\n\n`;
+
+  // Progress bar (ngoài box)
+  const progressBar = createProgressBar(state.round, state.totalRounds, 30);
+  description += `${progressBar}`;
 
   const embed = new EmbedBuilder()
-    .setTitle(`👑 BOSS BATTLE`)
-    .setDescription(`\`\`\`\n${description}\`\`\``)
+    .setTitle(`👑 BOSS BATTLE: ${boss.name}`)
+    .setDescription(description)
     .setColor(state.characterHp < state.characterMaxHp * 0.3 ? 0xFF0000 : 0xFFD700)
     .setFooter({ text: `⚔️ Trận chiến đang diễn ra... | Round ${state.round}/${state.totalRounds}` })
     .setTimestamp();
@@ -279,7 +295,7 @@ export function createBattleLiveEmbed(
 }
 
 /**
- * Create battle result embed với highlights và stats
+ * Create battle result embed với highlights và stats - Hunt style
  */
 export function createBattleResultEmbedV2(
   result: BattleResult,
@@ -290,95 +306,109 @@ export function createBattleResultEmbedV2(
 ): EmbedBuilder {
   const won = result.won;
   const color = won ? 0x00FF00 : 0xFF0000;
-  const title = won ? '🎉 CHIẾN THẮNG!' : '💀 THẤT BẠI!';
+
+  // Box drawing (rounded corners)
+  const BOX = {
+    topLeft: '╭',
+    topRight: '╮',
+    bottomLeft: '╰',
+    bottomRight: '╯',
+    horizontal: '─',
+    vertical: '│',
+    divider: '├',
+    dividerRight: '┤'
+  };
 
   let description = '';
 
-  // Result banner
+  // Main result box
+  description += `${BOX.topLeft}${BOX.horizontal.repeat(38)}${BOX.topRight}\n`;
   if (won) {
-    description += `╔═══════════════════════════════════╗\n`;
-    description += `║       🎉  CHIẾN THẮNG!  🎉        ║\n`;
-    description += `╚═══════════════════════════════════╝\n\n`;
+    description += `${BOX.vertical} ⚔️  **CHIẾN THẮNG!**                    ${BOX.vertical}\n`;
   } else {
-    description += `╔═══════════════════════════════════╗\n`;
-    description += `║        💀  THẤT BẠI!  💀          ║\n`;
-    description += `╚═══════════════════════════════════╝\n\n`;
+    description += `${BOX.vertical} 💀 **THẤT BẠI!**                       ${BOX.vertical}\n`;
   }
+  description += `${BOX.divider}${BOX.horizontal.repeat(38)}${BOX.dividerRight}\n`;
+  description += `${BOX.vertical} 👑 Boss: **${boss.name}** (Lv.${boss.level})\n`;
+  description += `${BOX.vertical} 📊 Status: ${won ? '**💀 DEFEATED**' : '**👑 VICTORIOUS**'}\n`;
+  description += `${BOX.vertical} ⏱️  Rounds: **${result.rounds.length} hiệp**\n`;
 
-  // Battle summary box
-  description += `┌─ 📋 Tổng kết trận đấu ${'─'.repeat(14)}\n`;
-  description += `│ 👑 Boss: ${boss.name} (Lv.${boss.level})\n`;
-  description += `│ 📊 Status: ${won ? '💀 DEFEATED' : '👑 VICTORIOUS'}\n`;
-  description += `│ ⏱️  Rounds: ${result.rounds.length} hiệp\n`;
-  description += `└${'─'.repeat(38)}\n\n`;
-
-  // Highlights box
-  if (highlights.length > 0) {
-    description += `┌─ 🎯 Battle Highlights ${'─'.repeat(14)}\n`;
-    for (const highlight of highlights.slice(0, 5)) {
-      description += `│ ${highlight.icon} R${highlight.round}: ${highlight.message}\n`;
-    }
-    description += `└${'─'.repeat(38)}\n\n`;
-  }
-
-  // Stats box
-  description += `┌─ 📊 Chi tiết thống kê ${'─'.repeat(15)}\n`;
-  description += `│ ⚔️  Sát thương gây ra: ${stats.totalDamageDealt}\n`;
-  description += `│ ❤️  Sát thương nhận: ${stats.totalDamageTaken}\n`;
+  // Stats section
+  description += `${BOX.divider}${BOX.horizontal.repeat(38)}${BOX.dividerRight}\n`;
+  description += `${BOX.vertical} 📊 **Chi tiết thống kê:**\n`;
+  description += `${BOX.vertical} ⚔️  Sát thương gây: **${stats.totalDamageDealt}**\n`;
+  description += `${BOX.vertical} ❤️  Sát thương nhận: **${stats.totalDamageTaken}**\n`;
   if (stats.criticalHits > 0) 
-    description += `│ ⚡ Critical Hits: ${stats.criticalHits}\n`;
+    description += `${BOX.vertical} ⚡ Critical Hits: **${stats.criticalHits}**\n`;
   if (stats.skillsUsed > 0) 
-    description += `│ 🌀 Skills sử dụng: ${stats.skillsUsed}\n`;
+    description += `${BOX.vertical} 🌀 Skills: **${stats.skillsUsed}**\n`;
   if (stats.dodges > 0) 
-    description += `│ 💨 Né tránh: ${stats.dodges}\n`;
-  description += `│ 🎯 Đòn mạnh nhất: ${stats.highestDamage}\n`;
-  description += `└${'─'.repeat(38)}\n`;
+    description += `${BOX.vertical} 💨 Dodges: **${stats.dodges}**\n`;
+  description += `${BOX.vertical} 🎯 Đòn mạnh nhất: **${stats.highestDamage}**\n`;
+
+  description += `${BOX.bottomLeft}${BOX.horizontal.repeat(38)}${BOX.bottomRight}`;
 
   const embed = new EmbedBuilder()
-    .setTitle(title)
-    .setDescription(`\`\`\`\n${description}\`\`\``)
+    .setTitle(won ? '🎉 CHIẾN THẮNG!' : '💀 THẤT BẠI!')
+    .setDescription(description)
     .setColor(color)
     .setTimestamp();
 
-  // Rewards box (nếu thắng)
+  // Highlights (nếu có)
+  if (highlights.length > 0) {
+    let highlightsText = '';
+    highlightsText += `${BOX.topLeft}${BOX.horizontal.repeat(38)}${BOX.topRight}\n`;
+    highlightsText += `${BOX.vertical} 🎯 **Battle Highlights:**\n`;
+    highlightsText += `${BOX.divider}${BOX.horizontal.repeat(38)}${BOX.dividerRight}\n`;
+    for (const highlight of highlights.slice(0, 5)) {
+      highlightsText += `${BOX.vertical} ${highlight.icon} R${highlight.round}: ${highlight.message}\n`;
+    }
+    highlightsText += `${BOX.bottomLeft}${BOX.horizontal.repeat(38)}${BOX.bottomRight}`;
+    
+    embed.addFields({ name: '\u200B', value: highlightsText, inline: false });
+  }
+
+  // Rewards (nếu thắng)
   if (won) {
-    let rewardsText = '```\n';
-    rewardsText += `┌─ 🎁 Phần thưởng ${'─'.repeat(20)}\n`;
-    rewardsText += `│ 💎 EXP: +${result.expGained}\n`;
-    rewardsText += `│ 💰 Gold: +${result.goldGained}\n`;
+    let rewardsText = '';
+    rewardsText += `${BOX.topLeft}${BOX.horizontal.repeat(38)}${BOX.topRight}\n`;
+    rewardsText += `${BOX.vertical} 🎁 **Phần thưởng:**\n`;
+    rewardsText += `${BOX.divider}${BOX.horizontal.repeat(38)}${BOX.dividerRight}\n`;
+    rewardsText += `${BOX.vertical} 💎 EXP: **+${result.expGained}**\n`;
+    rewardsText += `${BOX.vertical} 💰 Gold: **+${result.goldGained}**\n`;
 
     if (result.itemsDropped.length > 0) {
       const items = result.itemsDropped.map(i => i.name).join(', ');
-      rewardsText += `│ 📦 Items: ${items}\n`;
+      rewardsText += `${BOX.vertical} 📦 Items: **${items}**\n`;
     }
 
     if (result.questRewards.length > 0) {
-      rewardsText += `│ 🏆 Quests: ${result.questRewards.length} hoàn thành\n`;
+      rewardsText += `${BOX.vertical} 🏆 Quests: **${result.questRewards.length} hoàn thành**\n`;
     }
     
-    rewardsText += `└${'─'.repeat(38)}\n`;
-    rewardsText += '```';
+    rewardsText += `${BOX.bottomLeft}${BOX.horizontal.repeat(38)}${BOX.bottomRight}`;
 
     embed.addFields({ name: '\u200B', value: rewardsText, inline: false });
   } else {
-    let penaltyText = '```\n';
-    penaltyText += `┌─ 💔 Hậu quả ${'─'.repeat(24)}\n`;
-    penaltyText += `│ • Mất 10% vàng\n`;
-    penaltyText += `│ • HP còn lại: 1\n`;
-    penaltyText += `└${'─'.repeat(38)}\n`;
-    penaltyText += '```';
+    // Penalty
+    let penaltyText = '';
+    penaltyText += `${BOX.topLeft}${BOX.horizontal.repeat(38)}${BOX.topRight}\n`;
+    penaltyText += `${BOX.vertical} 💔 **Hậu quả:**\n`;
+    penaltyText += `${BOX.divider}${BOX.horizontal.repeat(38)}${BOX.dividerRight}\n`;
+    penaltyText += `${BOX.vertical} • Mất 10% vàng\n`;
+    penaltyText += `${BOX.vertical} • HP còn lại: 1\n`;
+    penaltyText += `${BOX.bottomLeft}${BOX.horizontal.repeat(38)}${BOX.bottomRight}`;
     
     embed.addFields({ name: '\u200B', value: penaltyText, inline: false });
   }
 
-  // Level up banner
+  // Level up (nếu có)
   if (won && result.leveledUp && result.newLevel) {
-    let levelUpText = '```\n';
-    levelUpText += `╔═══════════════════════════════════╗\n`;
-    levelUpText += `║        ⭐ LEVEL UP! ⭐           ║\n`;
-    levelUpText += `║      Lv.${result.newLevel - 1} ───→ Lv.${result.newLevel}              ║\n`;
-    levelUpText += `╚═══════════════════════════════════╝\n`;
-    levelUpText += '```';
+    let levelUpText = '';
+    levelUpText += `${BOX.topLeft}${BOX.horizontal.repeat(38)}${BOX.topRight}\n`;
+    levelUpText += `${BOX.vertical} ⭐ **LEVEL UP!**\n`;
+    levelUpText += `${BOX.vertical} Lv.${result.newLevel - 1} ───→ Lv.${result.newLevel}\n`;
+    levelUpText += `${BOX.bottomLeft}${BOX.horizontal.repeat(38)}${BOX.bottomRight}`;
     
     embed.addFields({ name: '\u200B', value: levelUpText, inline: false });
   }
