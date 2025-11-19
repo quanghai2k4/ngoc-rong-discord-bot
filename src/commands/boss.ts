@@ -1,13 +1,33 @@
-import { SlashCommandBuilder, ActionRowBuilder, StringSelectMenuBuilder, ComponentType, ChannelType } from 'discord.js';
+import { 
+  SlashCommandBuilder, 
+  ActionRowBuilder, 
+  StringSelectMenuBuilder, 
+  ButtonBuilder,
+  ButtonStyle,
+  ComponentType 
+} from 'discord.js';
 import { Command } from '../index';
 import { CharacterService } from '../services/CharacterService';
 import { BattleService } from '../services/BattleService';
 import { pool } from '../database/db';
 import { validateBattleReady } from '../middleware/validate';
-import { createBossMenuEmbed, createErrorEmbed, createLevelUpEmbed } from '../utils/embeds';
-import { formatBattleRound } from '../utils/battleDisplay';
+import { createBossMenuEmbed, createErrorEmbed } from '../utils/embeds';
 import { getRandomLocation } from '../config';
 import { BOT_CONFIG } from '../config';
+import {
+  createBattleLiveEmbed,
+  createBattleResultEmbedV2,
+  getBattleStateFromRounds,
+  extractBattleHighlights,
+  calculateBattleStats
+} from '../utils/bossBattleV2';
+import { logger } from '../utils/logger';
+
+const BOSS_BATTLE_CONFIG = {
+  UPDATE_INTERVAL: 800, // ms giữa mỗi update
+  FAST_FORWARD_INTERVAL: 100, // ms khi fast forward
+  MAX_ROUNDS_BEFORE_AUTO_SKIP: 30, // Auto skip nếu quá 30 rounds
+};
 
 export const bossCommand: Command = {
   data: new SlashCommandBuilder()
@@ -71,21 +91,18 @@ export const bossCommand: Command = {
         return;
       }
 
-      // Defer update để tránh timeout
+      // Defer update
       await confirmation.deferUpdate();
       
-      // Update reply để xóa menu
-      await interaction.editReply({ 
-        embeds: [createErrorEmbed(`⚔️ CHUẨN BỊ CHIẾN ĐẤU!\n\nĐang tạo chiến trường cho trận đấu với **${selectedBossData.name}**...`)], 
-        components: [] 
-      });
-
       // Random vị trí
       const newLocation = getRandomLocation();
       await CharacterService.updateLocation(character.id, newLocation);
 
-      // Spawn boss đã chọn với level ngẫu nhiên trong range
-      const bossLevel = Math.floor(Math.random() * (selectedBossData.max_level - selectedBossData.min_level + 1)) + selectedBossData.min_level;
+      // Spawn boss với level ngẫu nhiên
+      const bossLevel = Math.floor(
+        Math.random() * (selectedBossData.max_level - selectedBossData.min_level + 1)
+      ) + selectedBossData.min_level;
+
       const boss = {
         id: selectedBossData.id,
         name: selectedBossData.name,
@@ -106,116 +123,142 @@ export const bossCommand: Command = {
         is_super: false
       };
 
-      // Tạo thread cho boss fight
-      if (!interaction.channel || !('threads' in interaction.channel)) {
-        await interaction.editReply({ embeds: [createErrorEmbed('❌ Không thể tạo thread trong kênh này!')] });
-        return;
-      }
-
-      const thread = await interaction.channel.threads.create({
-        name: `⚔️ Boss Fight: ${boss.name}`,
-        autoArchiveDuration: 60,
-        type: ChannelType.PublicThread,
-        reason: `Boss fight giữa ${character.name} và ${boss.name}`
-      });
-
-      // Gửi thông báo vào thread
+      // Thông báo bắt đầu
       const startEmbed = createErrorEmbed(
-        `📍 **${newLocation}** ✨\n\n**${character.name}** thách đấu **👑 ${boss.name}**!`
+        `⚔️ **CHUẨN BỊ CHIẾN ĐẤU!**\n\n` +
+        `📍 Vị trí: **${newLocation}**\n` +
+        `👤 **${character.name}** (Lv.${character.level}) vs 👑 **${boss.name}** (Lv.${boss.level})\n\n` +
+        `*Đang mô phỏng trận chiến...*`
       )
-        .setTitle('👑 THÁCH ĐẤU BOSS!')
-        .setColor('#FFD700')
-        .addFields(
-          {
-            name: `👤 ${character.name} (Lv.${character.level})`,
-            value: `❤️ HP: \`${character.hp}\` • ⚔️ ATK: \`${character.attack}\` • 🛡️ DEF: \`${character.defense}\` • ⚡ SPD: \`${character.speed}\``,
-            inline: false
-          },
-          {
-            name: `👑 ${boss.name} (Lv.${boss.level})`,
-            value: `❤️ HP: \`${boss.hp}\` • ⚔️ ATK: \`${boss.attack}\` • 🛡️ DEF: \`${boss.defense}\` • ⚡ SPD: \`${boss.speed}\``,
-            inline: false
-          }
-        )
-        .setFooter({ text: '⚔️ Trận chiến bắt đầu!' });
+        .setTitle('👑 BOSS BATTLE')
+        .setColor(0xFFD700);
 
-      await thread.send({ embeds: [startEmbed] });
-
-      // Battle
-      const result = await BattleService.battle(character, [boss]);
-
-      // Gửi từng hiệp vào thread
-      for (const round of result.rounds) {
-        const roundText = formatBattleRound(round, character);
-        const roundEmbed = createErrorEmbed(roundText).setColor('#FFA500');
-        await thread.send({ embeds: [roundEmbed] });
-        await new Promise(resolve => setTimeout(resolve, BOT_CONFIG.ROUND_DELAY));
-      }
-
-      // Kết quả
-      const resultEmbed = createErrorEmbed(
-        result.won 
-          ? `**${character.name}** đã đánh bại **${boss.name}**!` 
-          : `**${character.name}** đã bị **${boss.name}** đánh bại!`
-      )
-        .setTitle(result.won ? '🎉 CHIẾN THẮNG!' : '💀 THẤT BẠI!')
-        .setColor(result.won ? '#00FF00' : '#FF0000')
-        .setFooter({ text: `Tổng số hiệp: ${result.rounds.length}` });
-
-      if (result.won) {
-        resultEmbed.addFields({
-          name: '🎁 Phần thưởng',
-          value: `🎯 EXP: **\`+${result.expGained}\`** • 💰 Vàng: **\`+${result.goldGained}\`**`,
-          inline: false
-        });
-
-        if (result.itemsDropped.length > 0) {
-          const itemsList = result.itemsDropped.map(item => `• **${item.name}**`).join('\n');
-          resultEmbed.addFields({
-            name: '📦 Vật phẩm rơi',
-            value: itemsList,
-            inline: false
-          });
-        }
-      } else {
-        resultEmbed.addFields({
-          name: '💔 Hậu quả',
-          value: '*Bạn mất 10% vàng và HP còn 1*',
-          inline: false
-        });
-      }
-
-      await thread.send({ embeds: [resultEmbed] });
-
-      // Level up trong thread nếu có
-      if (result.won && result.leveledUp && result.newLevel) {
-        const levelUpEmbed = createLevelUpEmbed(result.newLevel, character.name);
-        await thread.send({ embeds: [levelUpEmbed] });
-      }
-
-      // Archive và lock thread sau 10 giây
-      setTimeout(async () => {
-        try {
-          // Phải set archived và locked cùng lúc để tránh lỗi 50083
-          await thread.edit({ archived: true, locked: true });
-        } catch (error) {
-          console.error('Lỗi khi archive thread:', error);
-        }
-      }, BOT_CONFIG.BOSS_THREAD_ARCHIVE_DELAY);
-
-      // Update original message
-      await interaction.editReply({
-        embeds: [createErrorEmbed(
-          `Trận đấu với **${boss.name}** đã kết thúc!\n\n` +
-          `*Chi tiết trận đấu đã được ghi lại trong thread (sẽ tự động ẩn sau 10 giây)*`
-        )
-          .setTitle(result.won ? '🎉 CHIẾN THẮNG!' : '💀 THẤT BẠI!')
-          .setColor(result.won ? '#00FF00' : '#FF0000')
-        ]
+      await interaction.editReply({ 
+        embeds: [startEmbed], 
+        components: [] 
       });
+
+      // Run battle simulation
+      const result = await BattleService.battle(character, [boss]);
+      
+      // Extract highlights và stats
+      const highlights = extractBattleHighlights(result.rounds, character, boss);
+      const stats = calculateBattleStats(result.rounds, character);
+
+      // Determine if should animate or skip
+      const shouldAnimate = result.rounds.length <= BOSS_BATTLE_CONFIG.MAX_ROUNDS_BEFORE_AUTO_SKIP;
+
+      if (shouldAnimate) {
+        // Animated battle display
+        logger.info(`Boss battle animation: ${result.rounds.length} rounds`);
+
+        // Create control buttons
+        let paused = false;
+        let fastForward = false;
+
+        const buttons = new ActionRowBuilder<ButtonBuilder>()
+          .addComponents(
+            new ButtonBuilder()
+              .setCustomId('pause')
+              .setLabel('⏸️ Pause')
+              .setStyle(ButtonStyle.Secondary),
+            new ButtonBuilder()
+              .setCustomId('fast_forward')
+              .setLabel('⏩ Fast Forward')
+              .setStyle(ButtonStyle.Primary)
+          );
+
+        const message = await interaction.editReply({
+          embeds: [startEmbed],
+          components: [buttons]
+        });
+
+        // Button collector
+        const collector = message.createMessageComponentCollector({
+          componentType: ComponentType.Button,
+          time: result.rounds.length * BOSS_BATTLE_CONFIG.UPDATE_INTERVAL + 10000
+        });
+
+        collector.on('collect', async (i: any) => {
+          if (i.user.id !== interaction.user.id) {
+            await i.reply({ content: '❌ Chỉ người thách đấu mới có thể điều khiển!', ephemeral: true });
+            return;
+          }
+
+          if (i.customId === 'pause') {
+            paused = !paused;
+            await i.update({
+              components: [
+                new ActionRowBuilder<ButtonBuilder>()
+                  .addComponents(
+                    new ButtonBuilder()
+                      .setCustomId('pause')
+                      .setLabel(paused ? '▶️ Resume' : '⏸️ Pause')
+                      .setStyle(paused ? ButtonStyle.Success : ButtonStyle.Secondary),
+                    new ButtonBuilder()
+                      .setCustomId('fast_forward')
+                      .setLabel('⏩ Fast Forward')
+                      .setStyle(ButtonStyle.Primary)
+                      .setDisabled(paused)
+                  )
+              ]
+            });
+          } else if (i.customId === 'fast_forward') {
+            fastForward = true;
+            await i.update({ components: [] });
+          }
+        });
+
+        // Animation loop
+        for (let i = 0; i < result.rounds.length; i++) {
+          // Wait while paused
+          while (paused && !fastForward) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+
+          if (fastForward) break; // Skip to result
+
+          const state = getBattleStateFromRounds(result.rounds, i, character, boss);
+          const liveEmbed = createBattleLiveEmbed(state, character, boss);
+
+          try {
+            await message.edit({ embeds: [liveEmbed] });
+          } catch (error) {
+            logger.error('Error updating battle embed', error);
+            break;
+          }
+
+          const interval = fastForward 
+            ? BOSS_BATTLE_CONFIG.FAST_FORWARD_INTERVAL 
+            : BOSS_BATTLE_CONFIG.UPDATE_INTERVAL;
+
+          await new Promise(resolve => setTimeout(resolve, interval));
+        }
+
+        collector.stop();
+      } else {
+        // Skip animation cho battles quá dài
+        logger.info(`Boss battle auto-skipped: ${result.rounds.length} rounds (> ${BOSS_BATTLE_CONFIG.MAX_ROUNDS_BEFORE_AUTO_SKIP})`);
+      }
+
+      // Show final result
+      const resultEmbed = createBattleResultEmbedV2(
+        result,
+        character,
+        boss,
+        highlights,
+        stats
+      );
+
+      await interaction.editReply({
+        embeds: [resultEmbed],
+        components: []
+      });
+
+      logger.success(`Boss battle completed: ${character.name} vs ${boss.name} - ${result.won ? 'Won' : 'Lost'}`);
 
     } catch (error: any) {
-      console.error('[boss.ts] Error:', error);
+      logger.error('[boss.ts] Boss battle error', error);
       
       if (error.message && error.message.includes('time')) {
         await interaction.editReply({ 
