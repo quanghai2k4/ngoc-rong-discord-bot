@@ -389,17 +389,6 @@ export function createBattleResultEmbedV2(
     rewardsText += `${BOX.bottomLeft}${BOX.horizontal.repeat(38)}${BOX.bottomRight}`;
 
     embed.addFields({ name: '\u200B', value: rewardsText, inline: false });
-  } else {
-    // Penalty
-    let penaltyText = '';
-    penaltyText += `${BOX.topLeft}${BOX.horizontal.repeat(38)}${BOX.topRight}\n`;
-    penaltyText += `${BOX.vertical} 💔 **Hậu quả:**\n`;
-    penaltyText += `${BOX.divider}${BOX.horizontal.repeat(38)}${BOX.dividerRight}\n`;
-    penaltyText += `${BOX.vertical} • Mất 10% vàng\n`;
-    penaltyText += `${BOX.vertical} • HP còn lại: 1\n`;
-    penaltyText += `${BOX.bottomLeft}${BOX.horizontal.repeat(38)}${BOX.bottomRight}`;
-    
-    embed.addFields({ name: '\u200B', value: penaltyText, inline: false });
   }
 
   // Level up (nếu có)
