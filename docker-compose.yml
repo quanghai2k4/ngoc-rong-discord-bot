@@ -19,6 +19,21 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    container_name: ngoc_rong_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --requirepass redispassword
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   bot:
     build: 
       context: .
@@ -28,8 +43,11 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql://postgres:password@postgres:5432/ngoc_rong_db
+      REDIS_URL: redis://:redispassword@redis:6379
       NODE_ENV: production
       PGPASSWORD: password
     env_file:
@@ -37,3 +55,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:

@@ -1,11 +1,14 @@
 -- Seed initial data với Fixed Item IDs từ Ngọc Rồng Online
 
--- Insert character races (Order must match nclass_id in skill_template!)
--- nclass_id: 0=Trái đất, 1=Namek, 2=Saiyan
-INSERT INTO character_races (name, description, hp_bonus, ki_bonus, attack_bonus, defense_bonus) VALUES
-('Trái đất', 'Người Trái Đất thông minh và linh hoạt', 40, 40, 12, 12),
-('Namek', 'Người Namek với khả năng hồi phục tuyệt vời', 30, 50, 10, 15),
-('Saiyan', 'Chiến binh mạnh mẽ từ hành tinh Vegeta', 50, 30, 15, 10);
+-- Insert character races with explicit IDs starting from 0
+-- race_id = nclass_id: 0=Trái đất, 1=Namek, 2=Saiyan
+INSERT INTO character_races (id, name, description, hp_bonus, ki_bonus, attack_bonus, defense_bonus) VALUES
+(0, 'Trái đất', 'Người Trái Đất thông minh và linh hoạt', 40, 40, 12, 12),
+(1, 'Namek', 'Người Namek với khả năng hồi phục tuyệt vời', 30, 50, 10, 15),
+(2, 'Saiyan', 'Chiến binh mạnh mẽ từ hành tinh Vegeta', 50, 30, 15, 10);
+
+-- Set sequence to next available value
+SELECT setval('character_races_id_seq', 3, false);
 
 -- ==========================================
 -- ITEM TYPES - Fixed IDs từ game gốc

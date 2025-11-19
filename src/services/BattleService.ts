@@ -3,6 +3,7 @@ import { query } from '../database/db';
 import { CharacterService } from './CharacterService';
 import { MonsterService } from './MonsterService';
 import { SkillService } from './SkillService';
+import { DailyQuestService } from './DailyQuestService';
 
 export interface MonsterInstance {
   monster: Monster;
@@ -21,6 +22,12 @@ export interface BattleResult {
   characterDied: boolean;
   leveledUp: boolean;
   newLevel?: number;
+  questRewards: Array<{
+    questName: string;
+    expReward: number;
+    goldReward: number;
+    itemName: string | null;
+  }>;
 }
 
 export interface BattleRound {
@@ -57,6 +64,12 @@ export class BattleService {
     let charKi = character.ki;
     let roundNumber = 0;
     let characterStunned = false;
+    const questRewards: Array<{
+      questName: string;
+      expReward: number;
+      goldReward: number;
+      itemName: string | null;
+    }> = [];
 
     // Khởi tạo monster instances
     const monsterInstances: MonsterInstance[] = monsters.map(m => ({
@@ -67,7 +80,7 @@ export class BattleService {
     }));
 
     // Lấy skills của character và monsters
-    const characterSkills = await SkillService.getCharacterSkills(character.id);
+    const characterSkills = await SkillService.getCharacterSkillsLegacy(character.id);
     const monsterSkillsMap = new Map<number, Skill[]>();
     for (const monsterInst of monsterInstances) {
       const skills = await SkillService.getMonsterSkills(monsterInst.monster.id);
@@ -116,6 +129,17 @@ export class BattleService {
 
             actions.push(characterAction.text);
             charKi = Math.max(0, charKi - (characterAction.skill?.ki_cost || 0));
+
+            // Track skill usage for daily quests và capture rewards
+            if (characterAction.skill) {
+              const skillRewards = await DailyQuestService.updateQuestProgress(
+                character.id,
+                'use_skills',
+                characterAction.skill.id,
+                1
+              );
+              questRewards.push(...skillRewards);
+            }
 
             // Áp dụng damage
             if (characterAction.skill?.is_aoe) {
@@ -269,6 +293,49 @@ export class BattleService {
         'UPDATE characters SET gold = gold + $1, hp = max_hp, ki = max_ki WHERE id = $2',
         [goldGained, character.id]
       );
+
+      // Track daily quest progress và capture rewards
+      // Quest: kill_monsters (specific monster)
+      for (const monsterInst of monsterInstances) {
+        if (!monsterInst.isAlive) {
+          const killRewards = await DailyQuestService.updateQuestProgress(
+            character.id,
+            'kill_monsters',
+            monsterInst.monster.id,
+            1
+          );
+          questRewards.push(...killRewards);
+
+          // Boss quests
+          if (monsterInst.monster.is_boss) {
+            const bossRewards = await DailyQuestService.updateQuestProgress(
+              character.id,
+              'defeat_boss',
+              monsterInst.monster.id,
+              1
+            );
+            questRewards.push(...bossRewards);
+          }
+        }
+      }
+
+      // Quest: complete_hunts
+      const huntRewards = await DailyQuestService.updateQuestProgress(
+        character.id,
+        'complete_hunts',
+        null,
+        1
+      );
+      questRewards.push(...huntRewards);
+
+      // Quest: earn_gold
+      const goldRewards = await DailyQuestService.updateQuestProgress(
+        character.id,
+        'earn_gold',
+        null,
+        goldGained
+      );
+      questRewards.push(...goldRewards);
     } else {
       // Character lost - penalty and restore HP/KI
       const goldLost = Math.floor(character.gold * 0.1);
@@ -297,6 +364,7 @@ export class BattleService {
       characterDied,
       leveledUp,
       newLevel,
+      questRewards,
     };
   }
 

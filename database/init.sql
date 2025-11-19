@@ -41,16 +41,16 @@ CREATE TABLE IF NOT EXISTS characters (
     UNIQUE(player_id)
 );
 
--- Item types
+-- Item types (với fixed IDs từ game gốc)
 CREATE TABLE IF NOT EXISTS item_types (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
     name VARCHAR(50) UNIQUE NOT NULL,
     description TEXT
 );
 
--- Items
+-- Items (với fixed IDs từ Ngọc Rồng Online)
 CREATE TABLE IF NOT EXISTS items (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     item_type_id INTEGER REFERENCES item_types(id),
     description TEXT,
@@ -180,6 +180,35 @@ ALTER TABLE characters ADD COLUMN IF NOT EXISTS dodge_chance DECIMAL(4,2) DEFAUL
 ALTER TABLE monsters ADD COLUMN IF NOT EXISTS critical_chance DECIMAL(4,2) DEFAULT 3.00;
 ALTER TABLE monsters ADD COLUMN IF NOT EXISTS critical_damage DECIMAL(4,2) DEFAULT 1.30;
 
+-- Daily Quest Templates
+CREATE TABLE IF NOT EXISTS daily_quest_templates (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    quest_type VARCHAR(50) NOT NULL, -- 'kill_monsters', 'use_skills', 'defeat_boss', 'earn_gold', 'complete_hunts'
+    target_id INTEGER, -- monster_id for kill/defeat, skill_id for use_skills (NULL for generic)
+    required_amount INTEGER NOT NULL,
+    exp_reward INTEGER DEFAULT 0,
+    gold_reward INTEGER DEFAULT 0,
+    item_reward_id INTEGER REFERENCES items(id),
+    min_level INTEGER DEFAULT 1,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Character Daily Quests (assigned quests per day)
+CREATE TABLE IF NOT EXISTS character_daily_quests (
+    id SERIAL PRIMARY KEY,
+    character_id INTEGER REFERENCES characters(id) ON DELETE CASCADE,
+    quest_template_id INTEGER REFERENCES daily_quest_templates(id),
+    progress INTEGER DEFAULT 0,
+    completed BOOLEAN DEFAULT FALSE,
+    claimed BOOLEAN DEFAULT FALSE, -- Quest hoàn thành nhưng chưa nhận thưởng
+    assigned_date DATE NOT NULL, -- Ngày được assign quest (UTC+7)
+    completed_at TIMESTAMP,
+    claimed_at TIMESTAMP,
+    UNIQUE(character_id, quest_template_id, assigned_date)
+);
+
 -- Create indexes for better performance
 CREATE INDEX idx_characters_player_id ON characters(player_id);
 CREATE INDEX idx_character_items_character_id ON character_items(character_id);
@@ -188,3 +217,5 @@ CREATE INDEX idx_battle_logs_character_id ON battle_logs(character_id);
 CREATE INDEX idx_character_skills_character_id ON character_skills(character_id);
 CREATE INDEX idx_skills_race_id ON skills(race_id);
 CREATE INDEX idx_monsters_level_range ON monsters(min_level, max_level);
+CREATE INDEX idx_character_daily_quests_character_date ON character_daily_quests(character_id, assigned_date);
+CREATE INDEX idx_character_daily_quests_completed ON character_daily_quests(completed, claimed);

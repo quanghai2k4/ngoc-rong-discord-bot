@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 import { DB_CONFIG } from '../config';
+import { logger } from '../utils/logger';
 
 dotenv.config();
 
@@ -23,13 +24,16 @@ export async function query(text: string, params?: any[]) {
     if (isDev) {
       const duration = Date.now() - start;
       if (duration > DB_CONFIG.QUERY.SLOW_QUERY_THRESHOLD) {
-        console.log('⚠️  Slow query detected:', { text: text.substring(0, 80), duration, rows: res.rowCount });
+        logger.warn(`Slow query detected (${duration}ms)`, { 
+          query: text.substring(0, 80), 
+          rows: res.rowCount 
+        });
       }
     }
     
     return res;
   } catch (error: any) {
-    console.error('❌ Database query error:', {
+    logger.error('Database query error', {
       query: text.substring(0, 100),
       error: error.message,
       code: error.code

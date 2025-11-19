@@ -14,13 +14,16 @@ JOIN character_races cr ON c.race_id = cr.id;
 
 -- Step 2: Reset character_races table
 TRUNCATE TABLE character_races CASCADE;
-ALTER SEQUENCE character_races_id_seq RESTART WITH 1;
+-- Note: Cannot restart sequence at 0, will insert explicit IDs
 
--- Step 3: Insert races in correct order (matching nclass_id)
-INSERT INTO character_races (name, description, hp_bonus, ki_bonus, attack_bonus, defense_bonus) VALUES
-('Trái đất', 'Người Trái Đất thông minh và linh hoạt', 40, 40, 12, 12),  -- id=1, nclass_id=0
-('Namek', 'Người Namek với khả năng hồi phục tuyệt vời', 30, 50, 10, 15),  -- id=2, nclass_id=1
-('Saiyan', 'Chiến binh mạnh mẽ từ hành tinh Vegeta', 50, 30, 15, 10);     -- id=3, nclass_id=2
+-- Step 3: Insert races with explicit IDs starting from 0 (matching nclass_id)
+INSERT INTO character_races (id, name, description, hp_bonus, ki_bonus, attack_bonus, defense_bonus) VALUES
+(0, 'Trái đất', 'Người Trái Đất thông minh và linh hoạt', 40, 40, 12, 12),  -- id=0, nclass_id=0
+(1, 'Namek', 'Người Namek với khả năng hồi phục tuyệt vời', 30, 50, 10, 15),  -- id=1, nclass_id=1
+(2, 'Saiyan', 'Chiến binh mạnh mẽ từ hành tinh Vegeta', 50, 30, 15, 10);     -- id=2, nclass_id=2
+
+-- Set sequence to next value
+SELECT setval('character_races_id_seq', 3, false);
 
 -- Step 4: Restore characters with corrected race_id
 INSERT INTO characters (
@@ -35,11 +38,11 @@ SELECT
   hp, max_hp, ki, max_ki,
   attack, defense, speed, gold, location,
   critical_chance, critical_damage, dodge_chance,
-  -- Map old race name to new race_id
+  -- Map old race name to new race_id (starting from 0)
   CASE old_race_name
-    WHEN 'Trái đất' THEN 1
-    WHEN 'Namek' THEN 2
-    WHEN 'Saiyan' THEN 3
+    WHEN 'Trái đất' THEN 0
+    WHEN 'Namek' THEN 1
+    WHEN 'Saiyan' THEN 2
   END as race_id,
   created_at
 FROM temp_character_backup;
@@ -73,8 +76,8 @@ BEGIN
         AND cs.skill_id = st.skill_id
         AND cs.character_id = p_character_id
     WHERE st.nclass_id = (
-        -- Direct mapping: race_id 1,2,3 → nclass_id 0,1,2
-        SELECT c.race_id - 1
+        -- Direct 1:1 mapping: race_id = nclass_id (both start from 0)
+        SELECT c.race_id
         FROM characters c
         WHERE c.id = p_character_id
     )
@@ -87,10 +90,10 @@ SELECT
   '=== VERIFICATION ===' as status,
   cr.id as race_id,
   cr.name as race_name,
-  cr.id - 1 as nclass_id,
+  cr.id as nclass_id,
   st.name as first_skill
 FROM character_races cr
-LEFT JOIN skill_template st ON st.nclass_id = cr.id - 1 AND st.slot = 0
+LEFT JOIN skill_template st ON st.nclass_id = cr.id AND st.slot = 0
 ORDER BY cr.id;
 
 -- Step 8: Show restored characters
@@ -100,7 +103,7 @@ SELECT
   c.name,
   c.race_id,
   cr.name as race_name,
-  c.race_id - 1 as nclass_id
+  c.race_id as nclass_id
 FROM characters c
 JOIN character_races cr ON c.race_id = cr.id;
 

@@ -206,10 +206,17 @@ nrodiscord/
 ### Scripts
 
 ```bash
-npm run build      # Build TypeScript
-npm run start      # Run production
-npm run dev        # Run development
-npm run watch      # Watch TypeScript changes
+npm run build         # Build TypeScript
+npm run start         # Run production
+npm run dev           # Run development mode
+npm run watch         # Watch TypeScript changes
+npm run lint          # Check code quality
+npm run lint:fix      # Auto-fix linting issues
+npm run clean         # Remove dist folder
+npm run docker:up     # Start Docker containers
+npm run docker:down   # Stop Docker containers
+npm run docker:logs   # View bot logs
+npm run db:optimize   # Run database optimization
 ```
 
 ## 🔄 Database Migration
@@ -219,6 +226,39 @@ Khi database đã chạy, bạn có thể seed data:
 ```bash
 # Connect to PostgreSQL container
 docker exec -i ngoc_rong_db psql -U postgres -d ngoc_rong_db < database/seed.sql
+
+# Run database optimization
+npm run db:optimize
+```
+
+## ⚡ Performance Optimization
+
+Project đã được tối ưu với:
+
+### 🗄️ Database Optimization
+- **Indexes**: Đã thêm indexes cho các query thường dùng
+- **Partial indexes**: Tối ưu cho monster types (boss/normal)
+- **Composite indexes**: Tối ưu cho joins
+- **VACUUM & ANALYZE**: Cập nhật statistics cho query planner
+
+### 💾 Caching Strategy
+- **GameDataCache**: Cache tất cả static data (monsters, items, skills) vào memory
+- **TTL-based cache**: Tự động reload khi hết hạn
+- **CacheService**: Cache cho dynamic queries
+
+### 📊 Code Quality
+- **Logger Service**: Centralized logging với log levels
+- **Environment Validation**: Kiểm tra env variables khi startup
+- **ESLint**: Code quality và consistency
+- **TypeScript Strict Mode**: Type safety
+
+### 🚀 Performance Tips
+```bash
+# Set log level to reduce console output in production
+LOG_LEVEL=ERROR npm start
+
+# Monitor slow queries in development
+NODE_ENV=development npm run dev
 ```
 
 ## 🤝 Contributing
@@ -228,6 +268,13 @@ Contributions are welcome! Tạo Pull Request hoặc báo lỗi qua Issues.
 ## 📝 License
 
 MIT License
+
+## 🔗 Documentation
+
+- **[OPTIMIZATION.md](./OPTIMIZATION.md)** - Chi tiết về các tối ưu đã thực hiện
+- **[TECH_RECOMMENDATIONS.md](./TECH_RECOMMENDATIONS.md)** - Đề xuất công nghệ để scale bot
+- **[TECH_COMPARISON.md](./TECH_COMPARISON.md)** - So sánh và roadmap triển khai
+- **[QUICKSTART_REDIS.md](./QUICKSTART_REDIS.md)** - Quick start guide cho Redis + Rate Limiting
 
 ## 🙏 Credits
 

@@ -1,13 +1,15 @@
 import { query } from '../database/db';
-import { Monster, Skill, Item, CharacterRace } from '../types';
+import { Monster, Skill, Item, CharacterRace, SkillTemplate } from '../types';
 import { CACHE_CONFIG } from '../config';
+import { logger } from '../utils/logger';
+import { redisService } from './RedisService';
 
 /**
  * GameDataCache - Cache layer cho tất cả dữ liệu tĩnh trong game
  * 
  * Cache các dữ liệu không thay đổi thường xuyên:
  * - Monsters (stats, drops)
- * - Skills 
+ * - Skills (NEW: skill_template with levels)
  * - Items
  * - Character Races
  * - Monster Skills mapping
@@ -17,7 +19,8 @@ import { CACHE_CONFIG } from '../config';
 class GameDataCache {
   // Cache data
   private monsters: Map<number, Monster> = new Map();
-  private skills: Map<number, Skill> = new Map();
+  private skills: Map<number, Skill> = new Map(); // Legacy: old skills table (for monster_skills)
+  private skillTemplates: Map<string, SkillTemplate> = new Map(); // NEW: skill_template (key: nclass_id:skill_id)
   private items: Map<number, Item> = new Map();
   private races: Map<number, CharacterRace> = new Map();
   
@@ -34,31 +37,64 @@ class GameDataCache {
    * Nên gọi khi bot khởi động
    */
   async initialize(): Promise<void> {
-    console.log('🔄 Đang load game data vào cache...');
+    logger.cache('Đang load game data vào cache...');
     const startTime = Date.now();
 
     try {
-      // Load tất cả data song song
+      // Try to load from Redis first
+      const cachedData = await redisService.get<any>('gamedata:all');
+      
+      if (cachedData) {
+        // Load from Redis cache
+        this.monsters = new Map(cachedData.monsters);
+        this.skillTemplates = new Map(cachedData.skillTemplates);
+        this.items = new Map(cachedData.items);
+        this.races = new Map(cachedData.races);
+        this.monsterDrops = new Map(cachedData.monsterDrops);
+        
+        this.lastLoadTime = Date.now();
+        this.isInitialized = true;
+        
+        const loadTime = Date.now() - startTime;
+        logger.success(`Game data loaded from Redis cache! (${loadTime}ms)`);
+        logger.info(`📊 Monsters: ${this.monsters.size}`);
+        logger.info(`⚔️  Skill Templates: ${this.skillTemplates.size}`);
+        logger.info(`🎒 Items: ${this.items.size}`);
+        logger.info(`🧬 Races: ${this.races.size}`);
+        return;
+      }
+
+      // Cache miss - load from database
+      logger.cache('Redis cache miss - loading from database...');
+      
       await Promise.all([
         this.loadMonsters(),
-        this.loadSkills(),
+        this.loadSkillTemplates(),
         this.loadItems(),
         this.loadRaces(),
         this.loadMonsterDrops(),
-        this.loadMonsterSkills(),
       ]);
+
+      // Save to Redis with 30 min TTL
+      await redisService.set('gamedata:all', {
+        monsters: Array.from(this.monsters.entries()),
+        skillTemplates: Array.from(this.skillTemplates.entries()),
+        items: Array.from(this.items.entries()),
+        races: Array.from(this.races.entries()),
+        monsterDrops: Array.from(this.monsterDrops.entries()),
+      }, 30 * 60); // 30 minutes
 
       this.lastLoadTime = Date.now();
       this.isInitialized = true;
 
       const loadTime = Date.now() - startTime;
-      console.log(`✅ Game data cache loaded! (${loadTime}ms)`);
-      console.log(`   📊 Monsters: ${this.monsters.size}`);
-      console.log(`   ⚔️  Skills: ${this.skills.size}`);
-      console.log(`   🎒 Items: ${this.items.size}`);
-      console.log(`   🧬 Races: ${this.races.size}`);
+      logger.success(`Game data cache loaded from DB and cached to Redis! (${loadTime}ms)`);
+      logger.info(`📊 Monsters: ${this.monsters.size}`);
+      logger.info(`⚔️  Skill Templates: ${this.skillTemplates.size}`);
+      logger.info(`🎒 Items: ${this.items.size}`);
+      logger.info(`🧬 Races: ${this.races.size}`);
     } catch (error) {
-      console.error('❌ Lỗi khi load game data cache:', error);
+      logger.error('Lỗi khi load game data cache', error);
       throw error;
     }
   }
@@ -67,7 +103,11 @@ class GameDataCache {
    * Reload cache - gọi khi cần refresh data (sau khi update database)
    */
   async reload(): Promise<void> {
-    console.log('🔄 Reloading game data cache...');
+    logger.cache('Reloading game data cache...');
+    
+    // Clear Redis cache
+    await redisService.delete('gamedata:all');
+    
     this.clearAll();
     await this.initialize();
   }
@@ -99,17 +139,43 @@ class GameDataCache {
   }
 
   private async loadSkills(): Promise<void> {
+    // Legacy: Load old skills table for monster_skills compatibility
+    // TODO: Remove when monster_skills migrated to new system
+    try {
+      const result = await query(
+        `SELECT id, name, description, skill_type, race_id, required_level,
+                ki_cost, cooldown, damage_multiplier, heal_amount, crit_bonus,
+                stun_chance, defense_break, is_aoe
+         FROM skills 
+         ORDER BY required_level, ki_cost`
+      );
+
+      this.skills.clear();
+      for (const row of result.rows) {
+        this.skills.set(row.id, row);
+      }
+    } catch (error) {
+      // Table might not exist if migrated - that's ok
+      console.log('   ⚠️  Old skills table not found (expected after migration)');
+      this.skills.clear();
+    }
+  }
+
+  private async loadSkillTemplates(): Promise<void> {
     const result = await query(
-      `SELECT id, name, description, skill_type, race_id, required_level,
-              ki_cost, cooldown, damage_multiplier, heal_amount, crit_bonus,
-              stun_chance, defense_break, is_aoe
-       FROM skills 
-       ORDER BY required_level, ki_cost`
+      `SELECT nclass_id, skill_id, name, max_point, mana_use_type,
+              skill_type, icon_id, dam_info, slot, skill_levels
+       FROM skill_template 
+       ORDER BY nclass_id, slot`
     );
 
-    this.skills.clear();
+    this.skillTemplates.clear();
     for (const row of result.rows) {
-      this.skills.set(row.id, row);
+      const key = `${row.nclass_id}:${row.skill_id}`;
+      this.skillTemplates.set(key, {
+        ...row,
+        skill_levels: Array.isArray(row.skill_levels) ? row.skill_levels : JSON.parse(row.skill_levels)
+      });
     }
   }
 
@@ -160,21 +226,23 @@ class GameDataCache {
     }
   }
 
-  private async loadMonsterSkills(): Promise<void> {
-    const result = await query(
-      `SELECT ms.monster_id, s.*, ms.use_probability
-       FROM monster_skills ms
-       JOIN skills s ON ms.skill_id = s.id
-       ORDER BY ms.monster_id, ms.use_probability DESC`
-    );
+  // DEPRECATED: Monster skills removed after skill system migration
+  // Monster combat will be handled differently without skill system
+  // private async loadMonsterSkills(): Promise<void> {
+  //   const result = await query(
+  //     `SELECT ms.monster_id, s.*, ms.use_probability
+  //      FROM monster_skills ms
+  //      JOIN skills s ON ms.skill_id = s.id
+  //      ORDER BY ms.monster_id, ms.use_probability DESC`
+  //   );
 
-    this.monsterSkills.clear();
-    for (const row of result.rows) {
-      const skills = this.monsterSkills.get(row.monster_id) || [];
-      skills.push({ ...row, use_probability: row.use_probability });
-      this.monsterSkills.set(row.monster_id, skills);
-    }
-  }
+  //   this.monsterSkills.clear();
+  //   for (const row of result.rows) {
+  //     const skills = this.monsterSkills.get(row.monster_id) || [];
+  //     skills.push({ ...row, use_probability: row.use_probability });
+  //     this.monsterSkills.set(row.monster_id, skills);
+  //   }
+  // }
 
   // ==================== GETTER METHODS ====================
 
@@ -203,10 +271,33 @@ class GameDataCache {
   }
 
   /**
-   * Lấy skill theo ID
+   * Lấy skill theo ID (LEGACY - old skills table)
    */
   getSkillById(id: number): Skill | undefined {
     return this.skills.get(id);
+  }
+
+  /**
+   * Lấy skill template theo nclass_id và skill_id
+   */
+  getSkillTemplate(nclassId: number, skillId: number): SkillTemplate | undefined {
+    const key = `${nclassId}:${skillId}`;
+    return this.skillTemplates.get(key);
+  }
+
+  /**
+   * Lấy tất cả skill templates của một race (nclass_id)
+   */
+  getSkillTemplatesByRace(nclassId: number): SkillTemplate[] {
+    const results: SkillTemplate[] = [];
+    
+    for (const [key, template] of this.skillTemplates.entries()) {
+      if (template.nclass_id === nclassId) {
+        results.push(template);
+      }
+    }
+    
+    return results.sort((a, b) => a.slot - b.slot);
   }
 
   /**
@@ -287,6 +378,7 @@ class GameDataCache {
   private clearAll(): void {
     this.monsters.clear();
     this.skills.clear();
+    this.skillTemplates.clear();
     this.items.clear();
     this.races.clear();
     this.monsterDrops.clear();
@@ -305,6 +397,7 @@ class GameDataCache {
       counts: {
         monsters: this.monsters.size,
         skills: this.skills.size,
+        skillTemplates: this.skillTemplates.size,
         items: this.items.size,
         races: this.races.size,
         monsterDrops: this.monsterDrops.size,

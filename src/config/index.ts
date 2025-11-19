@@ -70,7 +70,7 @@ export const DB_CONFIG = {
   POOL: {
     MAX: 20,
     IDLE_TIMEOUT: 30000,
-    CONNECTION_TIMEOUT: 2000,
+    CONNECTION_TIMEOUT: 10000, // 10 seconds - tăng timeout cho startup
   },
   QUERY: {
     SLOW_QUERY_THRESHOLD: 100, // ms

@@ -1,6 +1,7 @@
 # Agent Guide for ngoc-rong-discord-bot
 
 - Luôn trả lời bằng tiếng Việt
+- Không tạo các file md tổng hợp, không tạo các file/script test
 
 ## Build/Test Commands
 - `npm run build` - Compile TypeScript to dist/

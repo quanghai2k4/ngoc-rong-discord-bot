@@ -4,7 +4,7 @@ import { CharacterService } from '../services/CharacterService';
 import { MonsterService } from '../services/MonsterService';
 import { BattleService } from '../services/BattleService';
 import { validateBattleReady } from '../middleware/validate';
-import { createBattleStartEmbed, createBattleResultEmbed, createLevelUpEmbed, createErrorEmbed } from '../utils/embeds';
+import { createBattleStartEmbed, createBattleResultEmbed, createLevelUpEmbed, createErrorEmbed, createQuestRewardsEmbed } from '../utils/embeds';
 import { createBattleLog, createHuntSummary } from '../utils/battleDisplay';
 import { getRandomLocation } from '../config';
 
@@ -78,6 +78,12 @@ export const huntCommand: Command = {
           }
 
           await interaction.editReply({ embeds: [resultEmbed] });
+
+          // Gửi quest rewards riêng nếu có
+          if (result.won && result.questRewards.length > 0) {
+            const questRewardsEmbed = createQuestRewardsEmbed(result.questRewards);
+            await interaction.followUp({ embeds: [questRewardsEmbed] });
+          }
 
           // Gửi tin nhắn level up riêng nếu có
           if (result.won && result.leveledUp && result.newLevel) {
