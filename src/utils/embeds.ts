@@ -1,11 +1,13 @@
-/**
- * Reusable embed builders cho Discord messages
- */
-
 import { EmbedBuilder } from 'discord.js';
 import { UI_CONFIG } from '../config';
-import { Character, Monster } from '../types';
-import { formatHpBar } from './helpers';
+import { Character, Monster, CharacterSkillView } from '../types';
+import { 
+  formatHpBar, 
+  formatCompactNumber, 
+  formatCooldown,
+  getSkillTypeIcon,
+  getSkillTypeName 
+} from './helpers';
 
 /**
  * Tạo embed cho battle start
@@ -254,83 +256,168 @@ export function createInventoryEmbed(
 }
 
 /**
- * Tạo embed cho skills list
+ * Tạo embed cho skills list với skill leveling system (GROUPED BY TYPE)
  */
 export function createSkillsEmbed(
   character: Character,
   raceName: string,
-  skills: any[]
+  skills: CharacterSkillView[]
 ): EmbedBuilder {
-  // Tính progress bar cho KI
-  const kiPercentage = Math.floor((character.ki / character.max_ki) * 10);
-  const kiBar = '█'.repeat(kiPercentage) + '░'.repeat(10 - kiPercentage);
+  const BOX = {
+    ROUNDED_TOP_LEFT: '╭',
+    ROUNDED_TOP_RIGHT: '╮',
+    ROUNDED_BOTTOM_LEFT: '╰',
+    ROUNDED_BOTTOM_RIGHT: '╯',
+    HORIZONTAL: '─',
+    VERTICAL: '│',
+    T_RIGHT: '├',
+    T_LEFT: '┤',
+  };
 
-  const embed = new EmbedBuilder()
-    .setColor(UI_CONFIG.COLORS.BOSS)
-    .setTitle(`⚡ Kỹ năng ${raceName}`)
-    .setDescription(
-      `**${character.name}** • Level **${character.level}**\n` +
-      `💙 KI: \`${character.ki}\`/\`${character.max_ki}\` ${kiBar}`
-    )
-    .setFooter({ text: 'Skills sẽ tự động sử dụng trong combat!' });
+  // Tính progress bar cho KI
+  const kiPercentage = Math.floor((character.ki / character.max_ki) * 15);
+  const kiBar = '█'.repeat(kiPercentage) + '░'.repeat(15 - kiPercentage);
+
+  // Header với hunt style
+  let description = `${BOX.ROUNDED_TOP_LEFT}${BOX.HORIZONTAL.repeat(40)}${BOX.ROUNDED_TOP_RIGHT}\n`;
+  description += `${BOX.VERTICAL} ⚡ **${raceName}** Lv.**${character.level}** • 💙\`${character.ki}/${character.max_ki}\` ${kiBar}\n`;
 
   if (skills.length === 0) {
-    embed.addFields({
-      name: '📝 Kỹ năng',
-      value: '*Chưa có kỹ năng! Hãy lên cấp để mở khóa.*',
-      inline: false
-    });
-    return embed;
-  }
-
-  const learnedSkills = skills.filter(s => s.learned);
-  const unlearnedSkills = skills.filter(s => !s.learned);
-
-  // Kỹ năng đã học
-  if (learnedSkills.length > 0) {
-    let learnedText = '';
-    for (const skill of learnedSkills) {
-      const canUse = character.level >= skill.required_level;
-      const icon = canUse ? '✅' : '🔒';
-      
-      let skillInfo = `${icon} **${skill.name}** Lv.\`${skill.required_level}\` • KI:\`${skill.ki_cost}\``;
-      
-      if (skill.skill_type === 'attack' && skill.damage_multiplier) {
-        skillInfo += ` • 💥\`${Math.round(skill.damage_multiplier * 100)}%\``;
-      } else if (skill.skill_type === 'heal') {
-        skillInfo += ` • 💚\`${skill.heal_amount}\``;
-      } else if (skill.skill_type === 'buff') {
-        skillInfo += ` • ⭐Buff`;
-      }
-      
-      learnedText += skillInfo + '\n';
-    }
+    description += `${BOX.T_RIGHT}${BOX.HORIZONTAL.repeat(40)}${BOX.T_LEFT}\n`;
+    description += `${BOX.VERTICAL} *Chưa có kỹ năng! Hãy lên cấp để mở.*\n`;
+    description += `${BOX.ROUNDED_BOTTOM_LEFT}${BOX.HORIZONTAL.repeat(40)}${BOX.ROUNDED_BOTTOM_RIGHT}`;
     
-    embed.addFields({
-      name: `✅ Đã học (${learnedSkills.length})`,
-      value: learnedText || 'Không có',
-      inline: false
-    });
+    return new EmbedBuilder()
+      .setColor(UI_CONFIG.COLORS.BOSS)
+      .setTitle(`⚡ Kỹ năng của ${character.name}`)
+      .setDescription(description)
+      .setFooter({ text: 'Dùng /learn <tên skill> để học skill mới!' });
   }
 
-  // Kỹ năng chưa học
-  if (unlearnedSkills.length > 0) {
-    let unlearnedText = '';
-    for (const skill of unlearnedSkills) {
-      const levelsNeeded = skill.required_level - character.level;
-      unlearnedText += `🔒 **${skill.name}** Lv.\`${skill.required_level}\``;
-      if (levelsNeeded > 0) {
-        unlearnedText += ` (còn \`${levelsNeeded}\`)`;
-      }
-      unlearnedText += '\n';
+  // Group skills by type
+  const skillsByType = new Map<number, CharacterSkillView[]>();
+  for (const skill of skills) {
+    if (!skillsByType.has(skill.skill_type)) {
+      skillsByType.set(skill.skill_type, []);
     }
-    
-    embed.addFields({
-      name: `🔒 Chưa học (${unlearnedSkills.length})`,
-      value: unlearnedText || 'Không có',
-      inline: false
-    });
+    skillsByType.get(skill.skill_type)!.push(skill);
   }
 
-  return embed;
+  // Sort types: Attack (1), Heal (2), Buff (3), Special (4)
+  const sortedTypes = Array.from(skillsByType.keys()).sort((a, b) => a - b);
+
+  for (const skillType of sortedTypes) {
+    const typeSkills = skillsByType.get(skillType)!;
+    const learned = typeSkills.filter(s => s.current_point > 0).length;
+    const total = typeSkills.length;
+    
+    const typeIcon = getSkillTypeIcon(skillType);
+    const typeName = getSkillTypeName(skillType).toUpperCase();
+    
+    description += `${BOX.T_RIGHT}${BOX.HORIZONTAL.repeat(40)}${BOX.T_LEFT}\n`;
+    description += `${BOX.VERTICAL} ${typeIcon} **${typeName}** (${learned}/${total} học)\n`;
+
+    for (const skill of typeSkills) {
+      const isLearned = skill.current_point > 0;
+      const levelData = isLearned ? skill.current_level_data : skill.current_level_data;
+      
+      // Get first level data for unlearned skills
+      const displayData = levelData;
+      
+      if (isLearned && displayData) {
+        // Learned skill - show current stats
+        const isMaxLevel = skill.current_point >= skill.max_point;
+        const icon = isMaxLevel ? '⭐' : '✅';
+        
+        // Shorten name if too long
+        const shortName = skill.name.length > 20 ? skill.name.substring(0, 18) + '..' : skill.name;
+        
+        description += `${BOX.VERTICAL} ${icon} ${shortName} \`${skill.current_point}/${skill.max_point}\``;
+        description += ` 💙\`${displayData.mana_use}\``;
+        
+        if (skill.skill_type === 1) { // Attack
+          description += ` 💥\`${displayData.damage}%\``;
+        } else if (skill.skill_type === 2) { // Heal
+          description += ` 💚\`+${displayData.damage}\``;
+        } else if (skill.skill_type === 3) { // Buff
+          description += ` ✨\`${displayData.damage}%\``;
+        } else if (skill.skill_type === 4) { // Special
+          description += ` 💣\`${displayData.damage}%\``;
+        }
+        
+        description += ` ⏱️\`${formatCooldown(displayData.cool_down)}\`\n`;
+        
+      } else if (displayData) {
+        // Unlearned skill - show requirements
+        const shortName = skill.name.length > 24 ? skill.name.substring(0, 22) + '..' : skill.name;
+        description += `${BOX.VERTICAL} 🔒 ${shortName}\n`;
+        description += `${BOX.VERTICAL}    💰\`${formatCompactNumber(displayData.price)}\` • ⭐\`${formatCompactNumber(displayData.power_require)}\``;
+        
+        // Show effect preview
+        if (skill.skill_type === 1) { // Attack
+          description += ` • 💥\`${displayData.damage}%\``;
+        } else if (skill.skill_type === 2) { // Heal
+          description += ` • 💚\`+${displayData.damage}\``;
+        } else if (skill.skill_type === 3) { // Buff
+          description += ` • ✨\`${displayData.damage}%\``;
+        } else if (skill.skill_type === 4) { // Special
+          description += ` • 💣\`${displayData.damage}%\``;
+        }
+        description += '\n';
+      }
+    }
+  }
+
+  description += `${BOX.ROUNDED_BOTTOM_LEFT}${BOX.HORIZONTAL.repeat(40)}${BOX.ROUNDED_BOTTOM_RIGHT}`;
+
+  return new EmbedBuilder()
+    .setColor(UI_CONFIG.COLORS.BOSS)
+    .setTitle(`⚡ Kỹ năng của ${character.name}`)
+    .setDescription(description)
+    .setFooter({ text: 'Dùng /learn <tên skill> để học skill mới!' });
 }
+
+/**
+ * Tạo embed cho quest rewards (auto-claimed)
+ */
+export function createQuestRewardsEmbed(questRewards: any[]): EmbedBuilder {
+  const BOX = {
+    ROUNDED_TOP_LEFT: '╭',
+    ROUNDED_TOP_RIGHT: '╮',
+    ROUNDED_BOTTOM_LEFT: '╰',
+    ROUNDED_BOTTOM_RIGHT: '╯',
+    HORIZONTAL: '─',
+    VERTICAL: '│',
+    T_RIGHT: '├',
+    T_LEFT: '┤',
+  };
+
+  let description = `${BOX.ROUNDED_TOP_LEFT}${BOX.HORIZONTAL.repeat(38)}${BOX.ROUNDED_TOP_RIGHT}\n`;
+  description += `${BOX.VERTICAL} 🎁 **PHẦN THƯỞNG TỰ ĐỘNG NHẬN**          ${BOX.VERTICAL}\n`;
+  description += `${BOX.T_RIGHT}${BOX.HORIZONTAL.repeat(38)}${BOX.T_LEFT}\n`;
+
+  questRewards.forEach((reward, index) => {
+    description += `${BOX.VERTICAL} ✅ **${reward.questName}**\n`;
+    
+    const rewardText = [];
+    if (reward.exp > 0) rewardText.push(`⭐ EXP: **+${reward.exp}**`);
+    if (reward.gold > 0) rewardText.push(`💰 Vàng: **+${reward.gold}**`);
+    if (reward.itemName) rewardText.push(`🎁 Vật phẩm: **${reward.itemName}**`);
+    
+    description += `${BOX.VERTICAL}    ${rewardText.join(' • ')}\n`;
+    
+    if (index < questRewards.length - 1) {
+      description += `${BOX.T_RIGHT}${BOX.HORIZONTAL.repeat(38)}${BOX.T_LEFT}\n`;
+    }
+  });
+
+  description += `${BOX.ROUNDED_BOTTOM_LEFT}${BOX.HORIZONTAL.repeat(38)}${BOX.ROUNDED_BOTTOM_RIGHT}`;
+
+  return new EmbedBuilder()
+    .setColor(UI_CONFIG.COLORS.SUCCESS)
+    .setTitle('🎊 Daily Quest Rewards')
+    .setDescription(description)
+    .setFooter({ text: 'Phần thưởng đã tự động được cộng vào!' })
+    .setTimestamp();
+}
+
