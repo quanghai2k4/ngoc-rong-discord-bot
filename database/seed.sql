@@ -1,39 +1,136 @@
--- Seed initial data
+-- Seed initial data với Fixed Item IDs từ Ngọc Rồng Online
 
--- Insert character races
+-- Insert character races (Order must match nclass_id in skill_template!)
+-- nclass_id: 0=Trái đất, 1=Namek, 2=Saiyan
 INSERT INTO character_races (name, description, hp_bonus, ki_bonus, attack_bonus, defense_bonus) VALUES
-('Saiyan', 'Chiến binh mạnh mẽ từ hành tinh Vegeta', 50, 30, 15, 10),
+('Trái đất', 'Người Trái Đất thông minh và linh hoạt', 40, 40, 12, 12),
 ('Namek', 'Người Namek với khả năng hồi phục tuyệt vời', 30, 50, 10, 15),
-('Trái đất', 'Người Trái Đất thông minh và linh hoạt', 40, 40, 12, 12);
+('Saiyan', 'Chiến binh mạnh mẽ từ hành tinh Vegeta', 50, 30, 15, 10);
 
--- Insert item types
-INSERT INTO item_types (name, description) VALUES
-('Weapon', 'Vũ khí tấn công'),
-('Armor', 'Áo giáp phòng thủ'),
-('Accessory', 'Phụ kiện hỗ trợ'),
-('Consumable', 'Vật phẩm tiêu hao');
+-- ==========================================
+-- ITEM TYPES - Fixed IDs từ game gốc
+-- ==========================================
+INSERT INTO item_types (id, name, description) VALUES
+(0, 'Armor', 'Áo giáp phòng thủ'),        -- TYPE = 0
+(1, 'Pants', 'Quần bảo vệ'),              -- TYPE = 1
+(2, 'Gloves', 'Găng tay tấn công'),       -- TYPE = 2
+(3, 'Boots', 'Giày tăng tốc'),            -- TYPE = 3
+(4, 'Radar', 'Rada tìm ngọc'),            -- TYPE = 4
+(5, 'Amulet', 'Bùa hộ mệnh'),             -- TYPE = 5
+(6, 'Consumable', 'Vật phẩm tiêu hao'),   -- TYPE = 6
+(7, 'Book', 'Sách học kỹ năng'),          -- TYPE = 7
+(8, 'Mount', 'Phương tiện'),              -- TYPE = 8
+(12, 'Quest', 'Vật phẩm nhiệm vụ'),       -- TYPE = 12
+(14, 'Flag', 'Cờ trang trí'),             -- TYPE = 14
+(15, 'Special', 'Vật phẩm đặc biệt');     -- TYPE = 15
 
--- Insert weapons
-INSERT INTO items (name, item_type_id, description, attack_bonus, price, required_level) VALUES
-('Gậy Như Ý', 1, 'Cây gậy thần kỳ có thể thay đổi kích thước', 20, 500, 1),
-('Kiếm Z', 1, 'Thanh kiếm của các chiến binh Z', 40, 1500, 5),
-('Gậy Thiên Sứ', 1, 'Vũ khí của thiên sứ', 80, 5000, 10);
+-- ==========================================
+-- ITEMS - ÁO GIÁP (TYPE 0)
+-- ==========================================
+INSERT INTO items (id, name, item_type_id, description, hp_bonus, ki_bonus, attack_bonus, defense_bonus, speed_bonus, price, is_consumable, required_level) VALUES
+-- Trái Đất
+(0, 'Áo vải 3 lỗ', 0, 'Giúp giảm sát thương', 0, 0, 0, 2, 0, 500, FALSE, 1),
+(3, 'Áo vải dày', 0, 'Giúp giảm sát thương', 0, 0, 0, 4, 0, 10000, FALSE, 3),
+-- Namek
+(1, 'Áo sợi len', 0, 'Giúp giảm sát thương', 0, 0, 0, 2, 0, 500, FALSE, 1),
+(4, 'Áo len Pico', 0, 'Giúp giảm sát thương', 0, 0, 0, 4, 0, 10000, FALSE, 3),
+-- Xayda
+(2, 'Áo vải thô', 0, 'Giúp giảm sát thương', 0, 0, 0, 2, 0, 500, FALSE, 1),
+(5, 'Áo giáp sắt', 0, 'Giúp giảm sát thương', 0, 0, 0, 4, 0, 10000, FALSE, 1);
 
--- Insert armors
-INSERT INTO items (name, item_type_id, description, defense_bonus, price, required_level) VALUES
-('Áo Giáp Saiyan', 2, 'Bộ giáp chiến đấu của người Saiyan', 30, 800, 3),
-('Áo Choàng Kaio', 2, 'Áo choàng của Kaio Shin', 60, 3000, 8),
-('Áo Giáp Thần', 2, 'Bộ giáp thiêng liêng', 100, 10000, 15);
+-- ==========================================
+-- ITEMS - QUẦN (TYPE 1)
+-- ==========================================
+INSERT INTO items (id, name, item_type_id, description, hp_bonus, ki_bonus, attack_bonus, defense_bonus, speed_bonus, price, is_consumable, required_level) VALUES
+-- Trái Đất
+(6, 'Quần vải đen', 1, 'Giúp tăng HP', 30, 0, 0, 0, 0, 400, FALSE, 1),
+(9, 'Quần vải dày', 1, 'Giúp tăng HP', 150, 0, 0, 0, 0, 8000, FALSE, 3),
+-- Namek
+(7, 'Quần sợi len', 1, 'Giúp tăng HP', 25, 0, 0, 0, 0, 400, FALSE, 1),
+(10, 'Quần vải thô Pico', 1, 'Giúp tăng HP', 120, 0, 0, 0, 0, 8000, FALSE, 3),
+-- Xayda
+(8, 'Quần vải thô', 1, 'Giúp tăng HP', 20, 0, 0, 0, 0, 400, FALSE, 1),
+(11, 'Quần giáp sắt', 1, 'Giúp tăng HP', 100, 0, 0, 0, 0, 8000, FALSE, 3);
 
--- Insert consumables
-INSERT INTO items (name, item_type_id, description, hp_bonus, ki_bonus, price, is_consumable, required_level) VALUES
-('Đậu Thần', 4, 'Hồi phục toàn bộ HP và KI', 9999, 9999, 100, TRUE, 1),
-('Thuốc Hồi HP Nhỏ', 4, 'Hồi phục 50 HP', 50, 0, 20, TRUE, 1),
-('Thuốc Hồi KI Nhỏ', 4, 'Hồi phục 50 KI', 0, 50, 20, TRUE, 1),
-('Thuốc Hồi HP Lớn', 4, 'Hồi phục 200 HP', 200, 0, 80, TRUE, 5),
-('Thuốc Hồi KI Lớn', 4, 'Hồi phục 200 KI', 0, 200, 80, TRUE, 5);
+-- ==========================================
+-- ITEMS - GĂNG TAY (TYPE 2)
+-- ==========================================
+INSERT INTO items (id, name, item_type_id, description, hp_bonus, ki_bonus, attack_bonus, defense_bonus, speed_bonus, price, is_consumable, required_level) VALUES
+-- Trái Đất
+(21, 'Găng vải đen', 2, 'Giúp tăng sức đánh', 0, 0, 3, 0, 0, 700, FALSE, 1),
+(24, 'Găng tay thêu', 2, 'Giúp tăng sức đánh', 0, 0, 6, 0, 0, 3000, FALSE, 3),
+-- Namek  
+(22, 'Găng sợi len', 2, 'Giúp tăng sức đánh', 0, 0, 3, 0, 0, 700, FALSE, 1),
+(25, 'Găng tay len', 2, 'Giúp tăng sức đánh', 0, 0, 6, 0, 0, 3000, FALSE, 3),
+-- Xayda
+(23, 'Găng vải thô', 2, 'Giúp tăng sức đánh', 0, 0, 3, 0, 0, 700, FALSE, 1),
+(26, 'Găng kim loại', 2, 'Giúp tăng sức đánh', 0, 0, 6, 0, 0, 3000, FALSE, 3);
 
--- Insert monsters
+-- ==========================================
+-- ITEMS - GIÀY (TYPE 3)
+-- ==========================================
+INSERT INTO items (id, name, item_type_id, description, hp_bonus, ki_bonus, attack_bonus, defense_bonus, speed_bonus, price, is_consumable, required_level) VALUES
+-- Trái Đất
+(27, 'Giày vải đen', 3, 'Giúp tăng KI', 0, 10, 0, 0, 0, 300, FALSE, 1),
+(30, 'Giày vải dày', 3, 'Giúp tăng KI', 0, 25, 0, 0, 0, 3000, FALSE, 3),
+-- Namek
+(28, 'Giày sợi len', 3, 'Giúp tăng KI', 0, 10, 0, 0, 0, 300, FALSE, 1),
+(31, 'Giày Pico', 3, 'Giúp tăng KI', 0, 25, 0, 0, 0, 3000, FALSE, 3),
+-- Xayda
+(29, 'Giày vải thô', 3, 'Giúp tăng KI', 0, 10, 0, 0, 0, 300, FALSE, 1),
+(32, 'Giày kim loại', 3, 'Giúp tăng KI', 0, 25, 0, 0, 0, 3000, FALSE, 3);
+
+-- ==========================================
+-- ITEMS - RADA (TYPE 4)
+-- ==========================================
+INSERT INTO items (id, name, item_type_id, description, hp_bonus, ki_bonus, attack_bonus, defense_bonus, speed_bonus, price, is_consumable, required_level) VALUES
+(12, 'Rada cấp 1', 4, 'Giúp tăng Chí Mạng', 0, 0, 0, 0, 0, 600, FALSE, 1);
+
+-- ==========================================
+-- ITEMS - CONSUMABLES (TYPE 6)
+-- ==========================================
+INSERT INTO items (id, name, item_type_id, description, hp_bonus, ki_bonus, attack_bonus, defense_bonus, speed_bonus, price, is_consumable, required_level) VALUES
+-- Đậu Thần
+(13, 'Đậu thần cấp 1', 6, 'Thức ăn phục hồi HP và KI', 50, 50, 0, 0, 0, 10, TRUE, 1),
+(188, 'Đậu thần cấp 2', 6, 'Thức ăn phục hồi HP và KI', 100, 100, 0, 0, 0, 20, TRUE, 5),
+(189, 'Đậu thần cấp 3', 6, 'Thức ăn phục hồi HP và KI', 200, 200, 0, 0, 0, 50, TRUE, 10),
+-- Thuốc hồi phục
+(190, 'Thuốc hồi HP nhỏ', 6, 'Hồi phục 50 HP', 50, 0, 0, 0, 0, 20, TRUE, 1),
+(191, 'Thuốc hồi KI nhỏ', 6, 'Hồi phục 50 KI', 0, 50, 0, 0, 0, 20, TRUE, 1),
+(192, 'Thuốc hồi HP lớn', 6, 'Hồi phục 200 HP', 200, 0, 0, 0, 0, 80, TRUE, 5),
+(193, 'Thuốc hồi KI lớn', 6, 'Hồi phục 200 KI', 0, 200, 0, 0, 0, 80, TRUE, 5),
+(194, 'Thuốc hồi HP siêu lớn', 6, 'Hồi phục 500 HP', 500, 0, 0, 0, 0, 200, TRUE, 10),
+(195, 'Thuốc hồi KI siêu lớn', 6, 'Hồi phục 500 KI', 0, 500, 0, 0, 0, 200, TRUE, 10);
+
+-- ==========================================
+-- ITEMS - NGỌC RỒNG (TYPE 12)
+-- ==========================================
+INSERT INTO items (id, name, item_type_id, description, hp_bonus, ki_bonus, attack_bonus, defense_bonus, speed_bonus, price, is_consumable, required_level) VALUES
+(14, 'Ngọc Rồng 1 sao', 12, 'Thu thập để ước rồng thần', 0, 0, 0, 0, 0, 0, FALSE, 0),
+(15, 'Ngọc Rồng 2 sao', 12, 'Thu thập để ước rồng thần', 0, 0, 0, 0, 0, 0, FALSE, 0),
+(16, 'Ngọc Rồng 3 sao', 12, 'Thu thập để ước rồng thần', 0, 0, 0, 0, 0, 0, FALSE, 0),
+(17, 'Ngọc Rồng 4 sao', 12, 'Thu thập để ước rồng thần', 0, 0, 0, 0, 0, 0, FALSE, 0),
+(18, 'Ngọc Rồng 5 sao', 12, 'Thu thập để ước rồng thần', 0, 0, 0, 0, 0, 0, FALSE, 0),
+(19, 'Ngọc Rồng 6 sao', 12, 'Thu thập để ước rồng thần', 0, 0, 0, 0, 0, 0, FALSE, 0),
+(20, 'Ngọc Rồng 7 sao', 12, 'Thu thập để ước rồng thần', 0, 0, 0, 0, 0, 0, FALSE, 0);
+
+-- ==========================================
+-- VŨ KHÍ CAO CẤP (Higher level items)
+-- ==========================================
+INSERT INTO items (id, name, item_type_id, description, hp_bonus, ki_bonus, attack_bonus, defense_bonus, speed_bonus, price, is_consumable, required_level) VALUES
+-- Weapons (dùng làm gloves với attack bonus cao)
+(127, 'Găng tay chiến binh', 2, 'Găng tay của chiến binh Z', 0, 0, 50, 0, 0, 50000, FALSE, 15),
+(128, 'Găng tay thần', 2, 'Găng tay thiêng liêng', 0, 0, 80, 0, 0, 100000, FALSE, 20),
+-- Armor cao cấp
+(136, 'Áo giáp chiến binh', 0, 'Bộ giáp chiến binh Z', 0, 0, 0, 40, 0, 50000, FALSE, 15),
+(137, 'Áo choàng thần', 0, 'Áo choàng của Kaio Shin', 0, 0, 0, 60, 0, 100000, FALSE, 20),
+-- Quần cao cấp
+(140, 'Quần chiến binh', 1, 'Quần của chiến binh Z', 300, 0, 0, 0, 0, 45000, FALSE, 15),
+(141, 'Quần thần', 1, 'Quần thiêng liêng', 500, 0, 0, 0, 0, 90000, FALSE, 20);
+
+-- ==========================================
+-- MONSTERS
+-- ==========================================
 INSERT INTO monsters (name, level, hp, attack, defense, speed, experience_reward, gold_reward, min_level, max_level, is_boss) VALUES
 -- Quái thường Level 1-5 (Newbie area)
 ('Sói Hoang', 1, 50, 8, 5, 10, 10, 15, 1, 3, FALSE),
@@ -76,50 +173,54 @@ INSERT INTO monsters (name, level, hp, attack, defense, speed, experience_reward
 ('Korin Sama', 25, 2000, 150, 120, 50, 2000, 4000, 20, 30, TRUE),
 ('Ông Già Gohan', 12, 800, 70, 55, 30, 600, 1000, 8, 15, TRUE);
 
--- Insert monster drops (item_id reference: xem items ở trên)
+-- ==========================================
+-- MONSTER DROPS - Updated với Fixed IDs
+-- ==========================================
 INSERT INTO monster_drops (monster_id, item_id, drop_rate) VALUES
--- Level 1-5 monsters
-(1, 7, 30.00),   -- Sói Hoang drops Thuốc Hồi HP Nhỏ
-(2, 7, 28.00),   -- Rắn Độc drops Thuốc Hồi HP Nhỏ
-(3, 8, 25.00),   -- Gấu Hoang drops Thuốc Hồi KI Nhỏ
-(4, 7, 25.00),   -- Khủng Long Nhỏ drops Thuốc Hồi HP Nhỏ
-(5, 8, 22.00),   -- Thỏ Dữ drops Thuốc Hồi KI Nhỏ
+-- Level 1-5 monsters (drop thuốc hồi nhỏ)
+(1, 190, 30.00),   -- Sói Hoang drops Thuốc hồi HP nhỏ (ID 190)
+(2, 190, 28.00),   -- Rắn Độc drops Thuốc hồi HP nhỏ
+(3, 191, 25.00),   -- Gấu Hoang drops Thuốc hồi KI nhỏ (ID 191)
+(4, 190, 25.00),   -- Khủng Long Nhỏ drops Thuốc hồi HP nhỏ
+(5, 191, 22.00),   -- Thỏ Dữ drops Thuốc hồi KI nhỏ
 
--- Level 4-8 monsters
-(6, 9, 20.00),   -- Tên Cướp drops Thuốc Hồi HP Lớn
-(7, 9, 18.00),   -- Lính Canh drops Thuốc Hồi HP Lớn
-(8, 10, 20.00),  -- Ninja Tập Sự drops Thuốc Hồi KI Lớn
-(9, 1, 15.00),   -- Cướp Biển drops Gậy Như Ý
-(10, 1, 12.00),  -- Sát Thủ Tập Sự drops Gậy Như Ý
+-- Level 4-8 monsters (drop thuốc hồi lớn + gear cấp thấp)
+(6, 192, 20.00),   -- Tên Cướp drops Thuốc hồi HP lớn (ID 192)
+(7, 192, 18.00),   -- Lính Canh drops Thuốc hồi HP lớn
+(8, 193, 20.00),   -- Ninja Tập Sự drops Thuốc hồi KI lớn (ID 193)
+(9, 21, 15.00),    -- Cướp Biển drops Găng vải đen (ID 21)
+(10, 21, 12.00),   -- Sát Thủ Tập Sự drops Găng vải đen
 
--- Level 7-12 monsters
-(11, 4, 15.00),  -- Quân Đội RR drops Áo Giáp Saiyan
-(12, 4, 13.00),  -- Lính Mũ Xanh drops Áo Giáp Saiyan
-(13, 2, 12.00),  -- Lính Mũ Đỏ drops Kiếm Z
-(14, 2, 10.00),  -- Cyborg drops Kiếm Z
-(15, 10, 15.00), -- Android Cũ drops Thuốc Hồi KI Lớn
+-- Level 7-12 monsters (drop armor + gloves)
+(11, 0, 15.00),    -- Quân Đội RR drops Áo vải 3 lỗ (ID 0)
+(12, 0, 13.00),    -- Lính Mũ Xanh drops Áo vải 3 lỗ
+(13, 24, 12.00),   -- Lính Mũ Đỏ drops Găng tay thêu (ID 24)
+(14, 24, 10.00),   -- Cyborg drops Găng tay thêu
+(15, 193, 15.00),  -- Android Cũ drops Thuốc hồi KI lớn
 
--- Level 10-16 monsters
-(16, 2, 10.00),  -- Quỷ Nhỏ drops Kiếm Z
-(17, 5, 12.00),  -- Quỷ Trung drops Áo Choàng Kaio
-(18, 3, 10.00),  -- Quỷ Đại drops Gậy Thiên Sứ
-(19, 5, 15.00),  -- Ma Vương Nhỏ drops Áo Choàng Kaio
+-- Level 10-16 monsters (drop better gear)
+(16, 24, 10.00),   -- Quỷ Nhỏ drops Găng tay thêu
+(17, 3, 12.00),    -- Quỷ Trung drops Áo vải dày (ID 3)
+(18, 26, 10.00),   -- Quỷ Đại drops Găng kim loại (ID 26)
+(19, 3, 15.00),    -- Ma Vương Nhỏ drops Áo vải dày
 
--- Level 15-25 monsters
-(20, 5, 8.00),   -- Frieza Lính drops Áo Choàng Kaio
-(21, 3, 8.00),   -- Zarbon Lính drops Gậy Thiên Sứ
-(22, 6, 10.00),  -- Dodoria Lính drops Áo Giáp Thần
-(23, 6, 8.00),   -- Ginyu Lính drops Áo Giáp Thần
-(24, 3, 7.00),   -- Saiyan Hạ Cấp drops Gậy Thiên Sứ
+-- Level 15-25 monsters (drop high-level gear)
+(20, 3, 8.00),     -- Frieza Lính drops Áo vải dày
+(21, 26, 8.00),    -- Zarbon Lính drops Găng kim loại
+(22, 136, 10.00),  -- Dodoria Lính drops Áo giáp chiến binh (ID 136)
+(23, 136, 8.00),   -- Ginyu Lính drops Áo giáp chiến binh
+(24, 127, 7.00),   -- Saiyan Hạ Cấp drops Găng tay chiến binh (ID 127)
 
--- Boss drops (higher rate, better items)
-(25, 6, 50.00),  -- Mèo Karin drops Đậu Thần
-(26, 6, 45.00),  -- Yajirobe drops Đậu Thần
-(27, 6, 40.00),  -- Thần Karin drops Áo Giáp Thần
-(28, 6, 35.00),  -- Korin Sama drops Áo Giáp Thần
-(29, 6, 42.00);  -- Ông Già Gohan drops Đậu Thần
+-- Boss drops (higher rate, Đậu Thần + rare items)
+(25, 13, 50.00),   -- Mèo Karin drops Đậu thần cấp 1 (ID 13)
+(26, 13, 45.00),   -- Yajirobe drops Đậu thần cấp 1
+(27, 136, 40.00),  -- Thần Karin drops Áo giáp chiến binh
+(28, 137, 35.00),  -- Korin Sama drops Áo choàng thần (ID 137)
+(29, 13, 42.00);   -- Ông Già Gohan drops Đậu thần cấp 1
 
--- Insert quests
+-- ==========================================
+-- QUESTS
+-- ==========================================
 INSERT INTO quests (name, description, required_level, experience_reward, gold_reward, monster_id, required_kills) VALUES
 ('Tiêu Diệt Sói Hoang', 'Giúp dân làng tiêu diệt 5 con sói hoang', 1, 50, 100, 1, 5),
 ('Săn Rắn Độc', 'Dọn sạch rắn độc trong rừng', 2, 80, 120, 2, 8),
@@ -128,7 +229,9 @@ INSERT INTO quests (name, description, required_level, experience_reward, gold_r
 ('Chiến Đấu Với Quỷ', 'Đánh bại quân quỷ của Piccolo', 10, 1000, 1200, 16, 5),
 ('Thử Thách Karin', 'Leo lên Tháp Karin và thách đấu', 10, 1500, 2000, 28, 1);
 
--- Insert skills (race-specific and universal)
+-- ==========================================
+-- SKILLS
+-- ==========================================
 -- Saiyan skills (race_id = 1)
 INSERT INTO skills (name, description, skill_type, race_id, required_level, ki_cost, damage_multiplier, crit_bonus, defense_break, is_aoe) VALUES
 ('Kamehameha', '🌊 Sóng năng lượng kinh điển! Gây sát thương lớn', 'attack', NULL, 3, 30, 2.0, 10.0, 0.2, TRUE),
@@ -156,11 +259,10 @@ INSERT INTO skills (name, description, skill_type, race_id, required_level, ki_c
 ('Spirit Bomb', '🌍 Nguyên khí đạn! Thu thập năng lượng vũ trụ', 'attack', NULL, 15, 80, 4.0, 30.0, TRUE),
 ('Kaio-ken', '🔴 Tăng tốc chiến đấu gấp bội', 'buff', NULL, 7, 35, 0.0, 15.0, FALSE);
 
--- Auto-learn basic skills for each race when character is created
--- These will be handled in CharacterService when creating character
-
--- Assign skills to monsters
--- Skill ID 13 = Ki Blast (universal basic attack)
+-- ==========================================
+-- MONSTER SKILLS
+-- ==========================================
+-- Assign Ki Blast (skill_id = 13) to all monsters
 INSERT INTO monster_skills (monster_id, skill_id, use_probability) VALUES
 -- Level 1-5 monsters
 (1, 13, 15.0),   -- Sói Hoang
@@ -202,3 +304,32 @@ INSERT INTO monster_skills (monster_id, skill_id, use_probability) VALUES
 (27, 13, 85.0),  -- Thần Karin
 (28, 13, 90.0),  -- Korin Sama
 (29, 13, 82.0);  -- Ông Già Gohan
+
+-- ==========================================
+-- DAILY QUEST TEMPLATES
+-- ==========================================
+INSERT INTO daily_quest_templates (name, description, quest_type, target_id, required_amount, exp_reward, gold_reward, item_reward_id, min_level) VALUES
+-- Kill Monsters Quests
+('Săn Ốc Sên', 'Đánh bại 10 con Ốc Sên', 'kill_monsters', 1, 10, 50, 100, NULL, 1),
+('Tiêu Diệt Khủng Long Xanh', 'Đánh bại 8 con Khủng Long Xanh', 'kill_monsters', 2, 8, 80, 150, NULL, 2),
+('Tiêu Diệt Khủng Long Đỏ', 'Đánh bại 8 con Khủng Long Đỏ', 'kill_monsters', 3, 8, 100, 180, NULL, 3),
+('Diệt Quỷ Đất', 'Đánh bại 12 con Quỷ Đất', 'kill_monsters', 4, 12, 120, 200, NULL, 3),
+('Săn Kỉ Nhân', 'Đánh bại 10 con Kỉ Nhân', 'kill_monsters', 7, 10, 200, 400, NULL, 5),
+('Tiêu Diệt Lính Fide', 'Đánh bại 15 Lính Fide', 'kill_monsters', 10, 15, 350, 600, NULL, 8),
+('Săn Khỉ Lính', 'Đánh bại 12 con Khỉ Lính', 'kill_monsters', 14, 12, 500, 800, NULL, 10),
+('Diệt Quái Vật Đại Lục', 'Đánh bại 20 Quái Vật bất kỳ', 'kill_monsters', NULL, 20, 300, 500, NULL, 5),
+
+-- Boss Quests
+('Hạ Gục Mèo Karin', 'Đánh bại Boss Mèo Karin', 'defeat_boss', 25, 1, 500, 1000, 13, 10),
+('Thử Thách Yajirobe', 'Đánh bại Boss Yajirobe', 'defeat_boss', 26, 1, 800, 1500, 13, 15),
+('Chiến Thắng Boss', 'Đánh bại 1 Boss bất kỳ', 'defeat_boss', NULL, 1, 400, 800, NULL, 8),
+
+-- Skill Usage Quests  
+('Luyện Tập Kamehameha', 'Sử dụng skill Kamehameha 5 lần', 'use_skills', 13, 5, 100, 150, NULL, 3),
+('Rèn Luyện Kỹ Năng', 'Sử dụng bất kỳ skill nào 10 lần', 'use_skills', NULL, 10, 150, 200, NULL, 3),
+
+-- Gold & Hunt Quests
+('Kiếm Vàng', 'Kiếm được 1000 vàng từ chiến đấu', 'earn_gold', NULL, 1000, 100, 0, NULL, 1),
+('Hoàn Thành Trận Chiến', 'Hoàn thành 5 trận săn bắt', 'complete_hunts', NULL, 5, 120, 250, NULL, 1),
+('Chiến Binh Không Mệt Mỏi', 'Hoàn thành 10 trận săn bắt', 'complete_hunts', NULL, 10, 250, 500, NULL, 5),
+('Thợ Săn Tiền Thưởng', 'Hoàn thành 15 trận săn bắt', 'complete_hunts', NULL, 15, 400, 800, NULL, 8);
