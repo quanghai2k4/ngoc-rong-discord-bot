@@ -169,3 +169,52 @@ export interface Skill extends SkillTemplate {
   is_aoe: boolean;  // Not in new system
   created_at: Date;  // Not in new system
 }
+
+// Rank System
+export interface Rank {
+  id: number;
+  name: string;
+  min_level: number;
+  color: string;
+  icon: string;
+  display_order: number;
+}
+
+// XP Log
+export interface XPLog {
+  id: number;
+  character_id: number;
+  activity_type: 'hunt' | 'boss' | 'quest' | 'daily_quest' | 'achievement' | 'bonus';
+  xp_amount: number;
+  description: string;
+  created_at: Date;
+}
+
+// Character Stats
+export interface CharacterStats {
+  id: number;
+  character_id: number;
+  total_xp_earned: number;
+  total_monsters_killed: number;
+  total_bosses_defeated: number;
+  total_quests_completed: number;
+  total_daily_quests_completed: number;
+  total_gold_earned: number;
+  total_damage_dealt: number;
+  total_damage_taken: number;
+  total_battles_won: number;
+  total_battles_lost: number;
+  highest_damage_dealt: number;
+  longest_win_streak: number;
+  current_win_streak: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
+// Combined Character with Rank
+export interface CharacterWithRank extends Character {
+  rank: Rank;
+  stats: CharacterStats;
+  total_xp: number;
+  server_rank: number;
+}

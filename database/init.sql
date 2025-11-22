@@ -209,6 +209,47 @@ CREATE TABLE IF NOT EXISTS character_daily_quests (
     UNIQUE(character_id, quest_template_id, assigned_date)
 );
 
+-- XP Activity Logs (chi tiết lịch sử nhận XP)
+CREATE TABLE IF NOT EXISTS xp_logs (
+    id SERIAL PRIMARY KEY,
+    character_id INTEGER REFERENCES characters(id) ON DELETE CASCADE,
+    activity_type VARCHAR(50) NOT NULL, -- 'hunt', 'boss', 'quest', 'daily_quest', 'achievement', 'bonus'
+    xp_amount INTEGER NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Rank System (hệ thống xếp hạng)
+CREATE TABLE IF NOT EXISTS ranks (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) UNIQUE NOT NULL,
+    min_level INTEGER NOT NULL,
+    color VARCHAR(7) NOT NULL, -- Hex color code
+    icon VARCHAR(10), -- Emoji icon
+    display_order INTEGER NOT NULL
+);
+
+-- Character Stats Tracking (theo dõi thống kê tổng hợp)
+CREATE TABLE IF NOT EXISTS character_stats (
+    id SERIAL PRIMARY KEY,
+    character_id INTEGER UNIQUE REFERENCES characters(id) ON DELETE CASCADE,
+    total_xp_earned BIGINT DEFAULT 0, -- Tổng XP kiếm được (không bao giờ giảm)
+    total_monsters_killed INTEGER DEFAULT 0,
+    total_bosses_defeated INTEGER DEFAULT 0,
+    total_quests_completed INTEGER DEFAULT 0,
+    total_daily_quests_completed INTEGER DEFAULT 0,
+    total_gold_earned BIGINT DEFAULT 0,
+    total_damage_dealt BIGINT DEFAULT 0,
+    total_damage_taken BIGINT DEFAULT 0,
+    total_battles_won INTEGER DEFAULT 0,
+    total_battles_lost INTEGER DEFAULT 0,
+    highest_damage_dealt INTEGER DEFAULT 0,
+    longest_win_streak INTEGER DEFAULT 0,
+    current_win_streak INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Create indexes for better performance
 CREATE INDEX idx_characters_player_id ON characters(player_id);
 CREATE INDEX idx_character_items_character_id ON character_items(character_id);
@@ -219,3 +260,6 @@ CREATE INDEX idx_skills_race_id ON skills(race_id);
 CREATE INDEX idx_monsters_level_range ON monsters(min_level, max_level);
 CREATE INDEX idx_character_daily_quests_character_date ON character_daily_quests(character_id, assigned_date);
 CREATE INDEX idx_character_daily_quests_completed ON character_daily_quests(completed, claimed);
+CREATE INDEX idx_xp_logs_character_id ON xp_logs(character_id);
+CREATE INDEX idx_xp_logs_created_at ON xp_logs(created_at);
+CREATE INDEX idx_character_stats_total_xp ON character_stats(total_xp_earned DESC);

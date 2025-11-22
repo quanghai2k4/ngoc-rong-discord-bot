@@ -36,6 +36,8 @@ import { buyCommand } from './commands/buy';
 import { sellCommand } from './commands/sell';
 import { dailyCommand } from './commands/daily';
 import { adminCommand } from './commands/admin';
+import { rankCommand } from './commands/rank';
+import { leaderboardCommand } from './commands/leaderboard';
 
 export interface Command {
   data: SlashCommandBuilder;
@@ -68,6 +70,8 @@ commands.set('buy', buyCommand);
 commands.set('sell', sellCommand);
 commands.set('daily', dailyCommand);
 commands.set('admin', adminCommand);
+commands.set('rank', rankCommand);
+commands.set('leaderboard', leaderboardCommand);
 
 client.once('ready', async () => {
   logger.success(`Bot đã sẵn sàng! Đăng nhập với tên ${client.user?.tag}`);
@@ -115,6 +119,8 @@ client.once('ready', async () => {
   
   try {
     logger.info('Đang đăng ký slash commands...');
+    logger.info(`Tổng số commands: ${commandsData.length}`);
+    logger.info(`Commands: ${commandsData.map(c => c.name).join(', ')}`);
     
     await rest.put(
       Routes.applicationCommands(process.env.DISCORD_CLIENT_ID!),

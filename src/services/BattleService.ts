@@ -1,9 +1,10 @@
 import { Character, Monster, Skill } from '../types';
-import { query } from '../database/db';
+import { query, pool } from '../database/db';
 import { CharacterService } from './CharacterService';
 import { MonsterService } from './MonsterService';
 import { SkillService } from './SkillService';
 import { DailyQuestService } from './DailyQuestService';
+import { XPService } from './XPService';
 
 export interface MonsterInstance {
   monster: Monster;
@@ -294,6 +295,47 @@ export class BattleService {
         [goldGained, character.id]
       );
 
+      // Track XP and character stats
+      const client = await pool.connect();
+      try {
+        const activityType = monsters.some(m => m.is_boss) ? 'boss' : 'hunt';
+        const monsterNames = monsters.map(m => m.name).join(', ');
+        
+        // Log XP gain
+        await client.query(
+          `INSERT INTO xp_logs (character_id, activity_type, xp_amount, description) 
+           VALUES ($1, $2, $3, $4)`,
+          [character.id, activityType, expGained, `Đánh bại ${monsterNames}`]
+        );
+
+        // Update character stats
+        await XPService.updateStats(client, character.id, {
+          total_xp_earned: expGained,
+          total_monsters_killed: monstersDefeated,
+          total_bosses_defeated: monsters.filter(m => m.is_boss).length,
+          total_gold_earned: goldGained,
+          total_battles_won: 1,
+          current_win_streak: 1,
+        });
+
+        // Update longest win streak if needed
+        const statsResult = await client.query(
+          'SELECT current_win_streak, longest_win_streak FROM character_stats WHERE character_id = $1',
+          [character.id]
+        );
+        if (statsResult.rows.length > 0) {
+          const stats = statsResult.rows[0];
+          if (stats.current_win_streak > stats.longest_win_streak) {
+            await client.query(
+              'UPDATE character_stats SET longest_win_streak = current_win_streak WHERE character_id = $1',
+              [character.id]
+            );
+          }
+        }
+      } finally {
+        client.release();
+      }
+
       // Track daily quest progress và capture rewards
       // Quest: kill_monsters (specific monster)
       for (const monsterInst of monsterInstances) {
@@ -351,6 +393,22 @@ export class BattleService {
            VALUES ($1, $2, $3, 0, $4)`,
           [character.id, monsterInstances[0].monster.id, false, -goldLost]
         );
+      }
+
+      // Track loss stats
+      const client = await pool.connect();
+      try {
+        await XPService.updateStats(client, character.id, {
+          total_battles_lost: 1,
+        });
+
+        // Reset win streak
+        await client.query(
+          'UPDATE character_stats SET current_win_streak = 0 WHERE character_id = $1',
+          [character.id]
+        );
+      } finally {
+        client.release();
       }
     }
 
