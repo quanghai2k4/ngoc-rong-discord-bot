@@ -38,6 +38,8 @@ import { dailyCommand } from './commands/daily';
 import { adminCommand } from './commands/admin';
 import { rankCommand } from './commands/rank';
 import { leaderboardCommand } from './commands/leaderboard';
+import { dragonballsCommand } from './commands/dragonballs';
+import { summonCommand } from './commands/summon';
 
 export interface Command {
   data: SlashCommandBuilder;
@@ -72,6 +74,8 @@ commands.set('daily', dailyCommand);
 commands.set('admin', adminCommand);
 commands.set('rank', rankCommand);
 commands.set('leaderboard', leaderboardCommand);
+commands.set('dragonballs', dragonballsCommand);
+commands.set('summon', summonCommand);
 
 client.once('ready', async () => {
   logger.success(`Bot đã sẵn sàng! Đăng nhập với tên ${client.user?.tag}`);

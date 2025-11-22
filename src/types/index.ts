@@ -218,3 +218,41 @@ export interface CharacterWithRank extends Character {
   total_xp: number;
   server_rank: number;
 }
+
+// Dragon Ball System
+export interface DragonBallSet {
+  id: number;
+  character_id: number;
+  set_type: 'earth' | 'namek';
+  ball_1_item_id: number | null;
+  ball_2_item_id: number | null;
+  ball_3_item_id: number | null;
+  ball_4_item_id: number | null;
+  ball_5_item_id: number | null;
+  ball_6_item_id: number | null;
+  ball_7_item_id: number | null;
+  is_complete: boolean;
+  completed_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface WishType {
+  id: number;
+  code: string;
+  name: string;
+  description: string;
+  required_level: number;
+  dragon_type: 'earth' | 'namek';
+  cooldown_days: number;
+  is_active: boolean;
+}
+
+export interface Wish {
+  id: number;
+  character_id: number;
+  wish_type_id: number;
+  set_type: 'earth' | 'namek';
+  wish_result: any; // JSONB
+  granted_at: Date;
+}
