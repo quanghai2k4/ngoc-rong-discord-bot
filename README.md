@@ -1,32 +1,32 @@
-# 🐉 Ngọc Rồng Discord Bot
+# Ngọc Rồng Discord Bot
 
-Discord RPG Bot lấy cảm hứng từ game Ngọc Rồng Online (Dragon Ball Online), được xây dựng với TypeScript, Discord.js, PostgreSQL và Docker.
+Bot RPG lấy vibe Ngọc Rồng Online, viết bằng TypeScript + Discord.js + PostgreSQL + Docker. Dễ setup, dễ chơi, không màu mè.
 
-## ✨ Tính năng
+## Tính năng chính
 
-- 🎮 **Hệ thống nhân vật**: Tạo nhân vật với 3 chủng tộc khác nhau (Saiyan, Namek, Earthling)
-- ⚔️ **Chiến đấu PvE**: Săn quái vật để kiếm kinh nghiệm và vàng
-- 📊 **Hệ thống level**: Tăng cấp và nâng chỉ số
-- 🎒 **Inventory**: Quản lý vật phẩm và trang bị
-- 💎 **Items**: Vũ khí, áo giáp, phụ kiện và vật phẩm tiêu hao
-- 🎁 **Monster drops**: Quái vật có thể rơi vật phẩm
-- 📍 **Nhiều khu vực**: Rừng Karin, Sa Mạc, Căn Cứ RR, Hành Tinh Namek...
+* Tạo nhân vật theo 3 hệ: Saiyan, Namek, Earthling
+* PvE: vô săn quái cày EXP, cày vàng
+* Hệ thống level và chỉ số
+* Inventory: quản lý vật phẩm và trang bị
+* Vật phẩm: vũ khí, giáp, phụ kiện, đồ tiêu hao
+* Monster drops: quái vật có thể rơi vật phẩm
+* Nhiều khu vực trong game (Rừng Karin, Sa Mạc, Căn Cứ RR, Namek...)
 
-## 🏗️ Công nghệ sử dụng
+## Công nghệ đang chạy
 
-- **TypeScript**: Ngôn ngữ lập trình chính
-- **Discord.js v14**: Thư viện Discord bot
-- **PostgreSQL**: Database
-- **Docker & Docker Compose**: Containerization
-- **Node.js**: Runtime environment
+* TypeScript
+* Discord.js v14
+* PostgreSQL
+* Docker & Docker Compose
+* Node.js
 
-## 📋 Yêu cầu
+## Cần chuẩn bị
 
-- Node.js 20+
-- Docker & Docker Compose
-- Discord Bot Token
+* Node.js 20+
+* Docker & Docker Compose
+* Discord Bot Token
 
-## 🚀 Cài đặt
+## Cách setup nhanh
 
 ### 1. Clone repository
 
@@ -37,18 +37,20 @@ cd nrodiscord
 
 ### 2. Tạo Discord Bot
 
-1. Truy cập [Discord Developer Portal](https://discord.com/developers/applications)
-2. Tạo một application mới
-3. Vào tab "Bot" và tạo bot
+1. Truy cập Discord Developer Portal
+2. Tạo Application mới
+3. Vào tab Bot và tạo bot
 4. Copy Bot Token
-5. **Bật các Privileged Gateway Intents:**
-   - ✅ Presence Intent
-   - ✅ Server Members Intent
-   - ✅ Message Content Intent (BẮT BUỘC cho prefix commands)
-6. Vào tab "OAuth2" > "URL Generator"
-   - Chọn scope: `bot`, `applications.commands`
-   - Chọn permissions: `Send Messages`, `Use Slash Commands`, `Embed Links`, `Read Message History`
-   - Copy URL và invite bot vào server của bạn
+5. Bật các Privileged Gateway Intents:
+
+   * Presence Intent
+   * Server Members Intent
+   * Message Content Intent (cần cho prefix)
+6. Vào tab OAuth2 → URL Generator
+
+   * Chọn scope: bot, applications.commands
+   * Chọn permissions: Send Messages, Use Slash Commands, Embed Links, Read Message History
+   * Copy URL và invite bot vào server
 
 ### 3. Cấu hình môi trường
 
@@ -56,7 +58,7 @@ cd nrodiscord
 cp .env.example .env
 ```
 
-Chỉnh sửa file `.env`:
+Chỉnh sửa `.env`:
 
 ```env
 DISCORD_TOKEN=your_discord_bot_token_here
@@ -65,138 +67,129 @@ DATABASE_URL=postgresql://postgres:password@localhost:5432/ngoc_rong_db
 NODE_ENV=development
 ```
 
-### 4. Chạy với Docker
+### 4. Chạy bằng Docker
 
 ```bash
-# Build và start services
 docker-compose up -d
-
-# Xem logs
 docker-compose logs -f bot
-
-# Stop services
 docker-compose down
 ```
 
 ### 5. Chạy local (không dùng Docker)
 
 ```bash
-# Cài đặt dependencies
 npm install
-
-# Khởi động PostgreSQL (hoặc dùng Docker chỉ cho PostgreSQL)
 docker-compose up -d postgres
-
-# Build TypeScript
 npm run build
-
-# Chạy bot
 npm start
-
-# Hoặc chạy development mode
+# Development mode
 npm run dev
 ```
 
-## 🎮 Commands
+## Commands — dùng thế nào
 
-Bot hỗ trợ cả Slash Commands (/) và Prefix Commands (z)
+Bot hỗ trợ Slash Commands (/) và Prefix Commands (z).
 
-### 📝 Prefix Commands (z)
+### Prefix Commands (z)
 
-- `zstart` / `zbatdau` - Bắt đầu hành trình, tạo nhân vật
-- `zprofile` / `zinfo` / `ztt` / `zthongtin` - Xem thông tin nhân vật
-- `zhunt` / `zsan` / `zdanhquai` - Đi săn quái vật để kiếm EXP và vàng
-- `zinventory` / `zinv` / `ztui` / `ztuido` - Xem túi đồ
-- `zhelp` / `zh` / `ztrogiup` - Hiển thị hướng dẫn
+* `zstart` / `zbatdau`: tạo nhân vật
+* `zprofile` / `zinfo`: xem thông tin nhân vật
+* `zhunt`: săn quái kiếm EXP và vàng
+* `zinventory` / `zinv`: xem túi đồ
+* `zhelp`: hướng dẫn
 
-### ⚡ Slash Commands (/)
+### Slash Commands (/)
 
-- `/start` - Bắt đầu hành trình, tạo nhân vật
-- `/profile` - Xem thông tin nhân vật
-- `/hunt` - Đi săn quái vật
-- `/inventory` - Xem túi đồ
+* `/start`: tạo nhân vật
+* `/profile`: xem thông tin nhân vật
+* `/hunt`: săn quái
+* `/inventory`: xem túi đồ
 
-## 📊 Database Schema
+## Database — cấu trúc chính
 
-### Tables chính:
+### Tables chính
 
-- **players**: Thông tin người chơi (Discord users)
-- **characters**: Nhân vật game
-- **character_races**: Các chủng tộc (Saiyan, Namek, Earthling)
-- **items**: Vật phẩm trong game
-- **character_items**: Inventory của nhân vật
-- **monsters**: Quái vật
-- **monster_drops**: Vật phẩm rơi từ quái
-- **quests**: Nhiệm vụ
-- **character_quests**: Tiến độ nhiệm vụ
-- **battle_logs**: Lịch sử chiến đấu
+* players
+* characters
+* character_races
+* items
+* character_items
+* monsters
+* monster_drops
+* quests
+* character_quests
+* battle_logs
 
-## 🎨 Chủng tộc
+## Chủng tộc — mô tả nhanh
 
-### 🔥 Saiyan
-- HP Bonus: +50
-- KI Bonus: +30
-- Attack Bonus: +15
-- Defense Bonus: +10
-- Đặc điểm: Chiến binh mạnh mẽ với sức tấn công cao
+### Saiyan
 
-### 🟢 Namek
-- HP Bonus: +30
-- KI Bonus: +50
-- Attack Bonus: +10
-- Defense Bonus: +15
-- Đặc điểm: Khả năng hồi phục và phòng thủ tốt
+* HP +50
+* KI +30
+* Attack +15
+* Defense +10
+* Mạnh về tấn công
 
-### 🌍 Earthling
-- HP Bonus: +40
-- KI Bonus: +40
-- Attack Bonus: +12
-- Defense Bonus: +12
-- Đặc điểm: Cân bằng, linh hoạt
+### Namek
 
-## 🗺️ Khu vực & Quái vật
+* HP +30
+* KI +50
+* Attack +10
+* Defense +15
+* Hồi phục và phòng thủ tốt
 
-- **Rừng Karin**: Sói Hoang (Lv1), Khủng Long (Lv3)
-- **Sa Mạc**: Tên Cướp (Lv5)
-- **Căn Cứ RR**: Quân Đội Ruy Băng Đỏ (Lv8)
-- **Cung Điện Piccolo**: Quỷ Nhỏ (Lv10)
-- **Hành Tinh Namek**: Frieza Lính (Lv15)
+### Earthling
 
-## ⚔️ Hệ thống chiến đấu
+* HP +40
+* KI +40
+* Attack +12
+* Defense +12
+* Cân bằng
 
-- Chiến đấu tự động theo lượt
-- Damage tính dựa trên Attack và Defense
-- Speed quyết định ai đánh trước
-- Nhận EXP và Gold khi thắng
-- Có tỷ lệ nhận vật phẩm từ quái
-- Phạt mất 10% vàng khi thua
+## Khu vực & quái
 
-## 📈 Hệ thống Level
+* Rừng Karin: Sói Hoang (Lv1), Khủng Long (Lv3)
+* Sa Mạc: Tên Cướp (Lv5)
+* Căn Cứ RR: Quân Đội Ruy Băng Đỏ (Lv8)
+* Cung Điện Piccolo: Quỷ Nhỏ (Lv10)
+* Hành Tinh Namek: Frieza lính (Lv15)
 
-- Mỗi level cần: 100 + (level - 1) * 50 EXP
-- Mỗi lần lên cấp:
-  - Max HP: +20
-  - Max KI: +20
-  - Attack: +5
-  - Defense: +5
-  - Speed: +3
+## Combat — hoạt động ra sao
 
-## 🛠️ Development
+* Chiến đấu theo lượt
+* Damage dựa trên Attack và Defense
+* Speed quyết định lượt đánh
+* Thắng nhận EXP và Gold
+* Có tỉ lệ rơi vật phẩm
+* Thua mất 10% vàng
+
+## Level — tăng sao cho lẹ
+
+* EXP mỗi level: `100 + (level - 1) * 50`
+* Mỗi lần lên cấp:
+
+  * HP +20
+  * KI +20
+  * Attack +5
+  * Defense +5
+  * Speed +3
+
+## Dev — cấu trúc project
 
 ### Project structure
 
 ```
 nrodiscord/
 ├── src/
-│   ├── commands/          # Slash commands
-│   ├── handlers/          # Prefix command handlers
-│   ├── database/          # Database connection
-│   ├── services/          # Business logic
-│   ├── types/            # TypeScript types
-│   └── index.ts          # Bot entry point
+│   ├── commands/
+│   ├── handlers/
+│   ├── database/
+│   ├── services/
+│   ├── types/
+│   └── index.ts
 ├── database/
-│   ├── init.sql          # Database schema
-│   └── seed.sql          # Initial data
+│   ├── init.sql
+│   └── seed.sql
 ├── docker-compose.yml
 ├── Dockerfile
 ├── package.json
@@ -206,80 +199,48 @@ nrodiscord/
 ### Scripts
 
 ```bash
-npm run build         # Build TypeScript
-npm run start         # Run production
-npm run dev           # Run development mode
-npm run watch         # Watch TypeScript changes
-npm run lint          # Check code quality
-npm run lint:fix      # Auto-fix linting issues
-npm run clean         # Remove dist folder
-npm run docker:up     # Start Docker containers
-npm run docker:down   # Stop Docker containers
-npm run docker:logs   # View bot logs
-npm run db:optimize   # Run database optimization
-```
-
-## 🔄 Database Migration
-
-Khi database đã chạy, bạn có thể seed data:
-
-```bash
-# Connect to PostgreSQL container
-docker exec -i ngoc_rong_db psql -U postgres -d ngoc_rong_db < database/seed.sql
-
-# Run database optimization
+npm run build
+npm run start
+npm run dev
+npm run watch
+npm run lint
+npm run lint:fix
+npm run clean
+npm run docker:up
+npm run docker:down
+npm run docker:logs
 npm run db:optimize
 ```
 
-## ⚡ Performance Optimization
+## Database Migration
 
-Project đã được tối ưu với:
-
-### 🗄️ Database Optimization
-- **Indexes**: Đã thêm indexes cho các query thường dùng
-- **Partial indexes**: Tối ưu cho monster types (boss/normal)
-- **Composite indexes**: Tối ưu cho joins
-- **VACUUM & ANALYZE**: Cập nhật statistics cho query planner
-
-### 💾 Caching Strategy
-- **GameDataCache**: Cache tất cả static data (monsters, items, skills) vào memory
-- **TTL-based cache**: Tự động reload khi hết hạn
-- **CacheService**: Cache cho dynamic queries
-
-### 📊 Code Quality
-- **Logger Service**: Centralized logging với log levels
-- **Environment Validation**: Kiểm tra env variables khi startup
-- **ESLint**: Code quality và consistency
-- **TypeScript Strict Mode**: Type safety
-
-### 🚀 Performance Tips
 ```bash
-# Set log level to reduce console output in production
-LOG_LEVEL=ERROR npm start
-
-# Monitor slow queries in development
-NODE_ENV=development npm run dev
+docker exec -i ngoc_rong_db psql -U postgres -d ngoc_rong_db < database/seed.sql
+npm run db:optimize
 ```
 
-## 🤝 Contributing
+## Tối ưu hiệu năng
 
-Contributions are welcome! Tạo Pull Request hoặc báo lỗi qua Issues.
+### Database
 
-## 📝 License
+* Indexes
+* Partial indexes
+* Composite indexes
+* VACUUM & ANALYZE
 
-MIT License
+### Caching
 
-## 🔗 Documentation
+* Cache static data (monsters, items, skills)
+* TTL-based cache
+* CacheService cho dynamic queries
 
-- **[OPTIMIZATION.md](./OPTIMIZATION.md)** - Chi tiết về các tối ưu đã thực hiện
-- **[TECH_RECOMMENDATIONS.md](./TECH_RECOMMENDATIONS.md)** - Đề xuất công nghệ để scale bot
-- **[TECH_COMPARISON.md](./TECH_COMPARISON.md)** - So sánh và roadmap triển khai
-- **[QUICKSTART_REDIS.md](./QUICKSTART_REDIS.md)** - Quick start guide cho Redis + Rate Limiting
+### Code Quality
 
-## 🙏 Credits
+* Logger Service
+* Environment validation
+* ESLint
+* TypeScript strict mode
 
-Lấy cảm hứng từ game Ngọc Rồng Online và series Dragon Ball.
+## Credits
 
----
-
-Made with ❤️ for Dragon Ball fans
+Dựa trên Ngọc Rồng Online và Dragon Ball.
