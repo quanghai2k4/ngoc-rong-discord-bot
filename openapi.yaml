@@ -1,0 +1,1128 @@
+openapi: 3.1.0
+info:
+  title: Ngọc Rồng Discord Bot API
+  description: |
+    API documentation cho Discord bot lấy ý tưởng từ Dragon Ball và Ngọc Rồng Online.
+    
+    **Note**: Discord bot sử dụng Discord Interactions API, không phải REST API truyền thống.
+    Spec này document các commands và responses để reference.
+    
+    **Authentication**: Discord OAuth2 (tự động qua Discord user ID)
+    
+    **Command Prefixes**:
+    - Slash commands: `/`
+    - Text commands: `z`
+    
+  version: 1.0.0
+  contact:
+    name: Developer
+    email: developer@example.com
+  license:
+    name: MIT
+    
+servers:
+  - url: https://discord.com/api/v10
+    description: Discord API v10
+
+tags:
+  - name: Character Management
+    description: Quản lý nhân vật
+  - name: Combat & Hunting
+    description: Chiến đấu và săn quái
+  - name: Inventory & Equipment
+    description: Quản lý inventory và trang bị
+  - name: Shop & Economy
+    description: Mua bán và kinh tế
+  - name: Skills & Progression
+    description: Kỹ năng và phát triển
+  - name: Quests
+    description: Nhiệm vụ hàng ngày
+  - name: Special Features
+    description: Tính năng đặc biệt (Ngọc Rồng, Đậu Thần)
+  - name: Leaderboard
+    description: Bảng xếp hạng
+  - name: Admin
+    description: Quản trị
+
+paths:
+  /commands/start:
+    post:
+      tags:
+        - Character Management
+      summary: Tạo nhân vật mới
+      description: |
+        Tạo nhân vật Dragon Ball mới cho user.
+        
+        **Aliases**: `zstart`, `zbatdau`
+        
+        **Flow**:
+        1. Kiểm tra user đã có character chưa
+        2. Hiển thị menu chọn chủng tộc (Saiyan/Namek/Earthling)
+        3. User chọn race → Tạo character với stats ban đầu
+        
+      operationId: createCharacter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                  description: Discord user ID
+                  example: "123456789012345678"
+                race:
+                  type: string
+                  enum: [Saiyan, Namek, Earthling]
+                  description: Chủng tộc
+                  example: "Saiyan"
+      responses:
+        '200':
+          description: Character created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacterResponse'
+              examples:
+                saiyan:
+                  summary: Saiyan character
+                  value:
+                    success: true
+                    character:
+                      id: 1
+                      discord_id: "123456789012345678"
+                      name: "Goku"
+                      race: "Saiyan"
+                      level: 1
+                      hp: 150
+                      max_hp: 150
+                      ki: 80
+                      max_ki: 80
+                      attack: 35
+                      defense: 30
+                      speed: 25
+                      gold: 100
+                      location: "Làng Aru"
+        '409':
+          description: Character already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "CHARACTER_EXISTS"
+                message: "Bạn đã có nhân vật rồi! Dùng /profile để xem thông tin."
+
+  /commands/profile:
+    get:
+      tags:
+        - Character Management
+      summary: Xem thông tin nhân vật
+      description: |
+        Hiển thị thông tin đầy đủ về nhân vật.
+        
+        **Aliases**: `zprofile`, `ztt`, `zthongtin`
+        
+        **Includes**:
+        - Stats (HP, KI, ATK, DEF, SPD)
+        - Equipment bonuses
+        - Skills learned
+        - Current location
+        - Gold and inventory count
+        
+      operationId: getProfile
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Discord user ID
+          example: "123456789012345678"
+      responses:
+        '200':
+          description: Profile data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '404':
+          description: Character not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "CHARACTER_NOT_FOUND"
+                message: "Bạn chưa có nhân vật! Dùng /start để tạo nhân vật."
+
+  /commands/hunt:
+    post:
+      tags:
+        - Combat & Hunting
+      summary: Săn quái vật
+      description: |
+        Săn quái vật để kiếm EXP, vàng và items.
+        
+        **Aliases**: `zhunt`, `zsan`, `zdanhquai`
+        
+        **Rate Limit**: 3 giây cooldown
+        
+        **Battle Mechanics**:
+        - Turn-based combat
+        - Damage formula: `baseDamage = ATK - (DEF * 0.5)`
+        - Critical chance: 5% base
+        - Critical multiplier: 1.5x
+        - Dodge chance: 5% base
+        - Skill usage: 65% chance if KI sufficient
+        
+        **Rewards**:
+        - EXP: Based on monster level
+        - Gold: Based on monster level
+        - Items: Random drops based on drop rate
+        - Dragon Ball: 1% chance from normal, 5% from boss
+        
+      operationId: hunt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                quantity:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  default: 1
+                  description: Số lượng quái săn (1-5)
+      responses:
+        '200':
+          description: Battle results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BattleResponse'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "RATE_LIMITED"
+                message: "⏱️ Vui lòng chờ 3 giây trước khi săn tiếp!"
+                retry_after: 3
+
+  /commands/boss:
+    post:
+      tags:
+        - Combat & Hunting
+      summary: Đánh boss
+      description: |
+        Chiến đấu với boss để nhận phần thưởng lớn.
+        
+        **Aliases**: `zboss`
+        
+        **Rate Limit**: 10 giây cooldown
+        
+        **Boss Mechanics**:
+        - Boss có stats cao hơn normal monsters
+        - Multi-phase battles
+        - Special attacks và skills
+        - Phần thưởng gấp 3-5 lần normal
+        - Dragon Ball drop rate: 5%
+        
+      operationId: bossBattle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+      responses:
+        '200':
+          description: Boss battle results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BattleResponse'
+        '429':
+          description: Rate limited
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /commands/inventory:
+    get:
+      tags:
+        - Inventory & Equipment
+      summary: Xem inventory
+      description: |
+        Xem túi đồ với tất cả items.
+        
+        **Aliases**: `zinventory`, `zinv`, `ztuido`
+        
+        **Categories**:
+        - Weapons
+        - Armor
+        - Accessories
+        - Consumables
+        
+        **Pagination**: 10 items per page
+        
+      operationId: getInventory
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Inventory data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryResponse'
+
+  /commands/equip:
+    post:
+      tags:
+        - Inventory & Equipment
+      summary: Trang bị item
+      description: |
+        Trang bị vũ khí, áo giáp hoặc phụ kiện.
+        
+        **Aliases**: `zequip`, `ztrangbi`
+        
+        **Equipment Slots**:
+        - Weapon (1 slot)
+        - Armor (1 slot)
+        - Accessory (2 slots)
+        
+      operationId: equipItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                item_id:
+                  type: integer
+      responses:
+        '200':
+          description: Item equipped
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    $ref: '#/components/schemas/Item'
+                  stats_change:
+                    type: object
+                    properties:
+                      hp:
+                        type: integer
+                      attack:
+                        type: integer
+                      defense:
+                        type: integer
+        '400':
+          description: Cannot equip
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /commands/shop:
+    get:
+      tags:
+        - Shop & Economy
+      summary: Xem shop
+      description: |
+        Xem danh sách items có thể mua.
+        
+        **Aliases**: `zshop`
+        
+        **Categories**:
+        - Weapons
+        - Armor
+        - Accessories
+        - Consumables
+        
+        **Filters**:
+        - By level requirement
+        - By race requirement
+        - By price range
+        
+      operationId: getShop
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [all, weapon, armor, accessory, consumable]
+            default: all
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Shop items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShopResponse'
+
+  /commands/buy:
+    post:
+      tags:
+        - Shop & Economy
+      summary: Mua item
+      description: |
+        Mua item từ shop.
+        
+        **Aliases**: `zbuy`
+        
+        **Validations**:
+        - Đủ gold
+        - Đủ level requirement
+        - Đúng race requirement (nếu có)
+        - Inventory chưa đầy (max 100 unique items)
+        
+      operationId: buyItem
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - user_id
+                - item_id
+              properties:
+                user_id:
+                  type: string
+                item_id:
+                  type: integer
+                quantity:
+                  type: integer
+                  default: 1
+                  minimum: 1
+                  maximum: 99
+      responses:
+        '200':
+          description: Purchase successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  item:
+                    $ref: '#/components/schemas/Item'
+                  quantity:
+                    type: integer
+                  total_cost:
+                    type: integer
+                  remaining_gold:
+                    type: integer
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                insufficient_gold:
+                  value:
+                    error: "INSUFFICIENT_GOLD"
+                    message: "Bạn không đủ vàng! Cần 1000💰, hiện có 500💰"
+                level_requirement:
+                  value:
+                    error: "LEVEL_REQUIREMENT_NOT_MET"
+                    message: "Cần level 10 để mua item này!"
+
+  /commands/skills:
+    get:
+      tags:
+        - Skills & Progression
+      summary: Xem skills đã học
+      description: |
+        Xem danh sách kỹ năng đã học.
+        
+        **Aliases**: `zskills`, `zkynang`
+        
+        **Skill Info**:
+        - Name và description
+        - Current point (level 1-7)
+        - Damage/heal amount
+        - KI cost
+        - Cooldown
+        
+      operationId: getSkills
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Skills list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkillsResponse'
+
+  /commands/learn:
+    post:
+      tags:
+        - Skills & Progression
+      summary: Học skill mới
+      description: |
+        Học hoặc nâng cấp kỹ năng.
+        
+        **Aliases**: `zlearn`, `zhoc`
+        
+        **Requirements**:
+        - Đủ level
+        - Đủ gold
+        - Skill chưa max point (7)
+        
+        **Skill Types**:
+        1. Attack skills (damage multiplier)
+        2. Heal skills (HP recovery)
+        3. Buff skills (stat boost)
+        4. Special skills (unique effects)
+        
+      operationId: learnSkill
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                skill_id:
+                  type: integer
+                nclass_id:
+                  type: integer
+      responses:
+        '200':
+          description: Skill learned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  skill:
+                    $ref: '#/components/schemas/Skill'
+                  cost:
+                    type: integer
+                  remaining_gold:
+                    type: integer
+
+  /commands/daily:
+    get:
+      tags:
+        - Quests
+      summary: Xem nhiệm vụ hàng ngày
+      description: |
+        Xem hoặc claim nhiệm vụ hàng ngày.
+        
+        **Aliases**: `zdaily`
+        
+        **Quest Types**:
+        - Hunt X monsters
+        - Defeat X bosses
+        - Earn X gold
+        - Reach level X
+        
+        **Rewards**:
+        - EXP
+        - Gold
+        - Items
+        
+        **Reset**: Mỗi ngày lúc 00:00 (UTC+7)
+        
+      operationId: getDailyQuests
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [view, claim]
+            default: view
+      responses:
+        '200':
+          description: Daily quests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DailyQuestResponse'
+
+  /commands/dragonballs:
+    get:
+      tags:
+        - Special Features
+      summary: Xem ngọc rồng đã thu thập
+      description: |
+        Xem progress thu thập 7 viên ngọc rồng.
+        
+        **Aliases**: `zdragonballs`, `zdb`, `zngocrong`
+        
+        **Drop Rates**:
+        - Normal monster: 1%
+        - Boss: 5%
+        
+        **Collection**: Cần 7/7 viên để summon
+        
+      operationId: getDragonBalls
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Dragon balls collection
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                    example: 5
+                  balls:
+                    type: array
+                    items:
+                      type: integer
+                    example: [1, 2, 4, 6, 7]
+                  missing:
+                    type: array
+                    items:
+                      type: integer
+                    example: [3, 5]
+                  can_summon:
+                    type: boolean
+
+  /commands/summon:
+    post:
+      tags:
+        - Special Features
+      summary: Triệu hồi Rồng Thần
+      description: |
+        Triệu hồi Shenron khi có đủ 7 viên ngọc rồng.
+        
+        **Aliases**: `zsummon`, `ztrieuhoi`
+        
+        **Wish Types**:
+        1. **Power**: +20% all stats
+        2. **Gold**: +50,000 gold
+        3. **Rare Item**: Random legendary item
+        4. **Full Heal**: HP + KI full, remove debuffs
+        
+        **Cooldown**: 7 ngày sau khi summon
+        
+      operationId: summonDragon
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                wish_type:
+                  type: string
+                  enum: [power, gold, item, heal]
+      responses:
+        '200':
+          description: Summon successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  wish:
+                    type: string
+                  rewards:
+                    type: object
+        '400':
+          description: Cannot summon
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "INSUFFICIENT_DRAGON_BALLS"
+                message: "Bạn chưa có đủ 7 viên ngọc rồng! Hiện có: 5/7"
+
+  /commands/senzu:
+    get:
+      tags:
+        - Special Features
+      summary: Quản lý đậu thần
+      description: |
+        Harvest và upgrade vườn đậu thần.
+        
+        **Aliases**: `zsenzu`, `zdau`
+        
+        **Actions**:
+        - `view`: Xem trạng thái vườn
+        - `harvest`: Thu hoạch đậu
+        - `upgrade`: Nâng cấp vườn
+        
+        **Mechanics**:
+        - Harvest interval: Giảm theo level (6h → 1h)
+        - Amount per harvest: Tăng theo level (3 → 10)
+        - Upgrade cost: Tăng theo level
+        
+      operationId: manageSenzu
+      parameters:
+        - name: user_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [view, harvest, upgrade]
+            default: view
+      responses:
+        '200':
+          description: Senzu field status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SenzuResponse'
+
+  /commands/leaderboard:
+    get:
+      tags:
+        - Leaderboard
+      summary: Bảng xếp hạng
+      description: |
+        Xem bảng xếp hạng server.
+        
+        **Aliases**: `zleaderboard`, `zrank`, `ztop`
+        
+        **Sort Options**:
+        - Level (mặc định)
+        - Power (total stats)
+        - Gold
+        
+        **Pagination**: 10 players per page
+        
+      operationId: getLeaderboard
+      parameters:
+        - name: guild_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: sort_by
+          in: query
+          schema:
+            type: string
+            enum: [level, power, gold]
+            default: level
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Leaderboard data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LeaderboardResponse'
+
+components:
+  schemas:
+    CharacterResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        character:
+          $ref: '#/components/schemas/Character'
+    
+    Character:
+      type: object
+      properties:
+        id:
+          type: integer
+        discord_id:
+          type: string
+        name:
+          type: string
+        race:
+          type: string
+          enum: [Saiyan, Namek, Earthling]
+        level:
+          type: integer
+        experience:
+          type: integer
+        hp:
+          type: integer
+        max_hp:
+          type: integer
+        ki:
+          type: integer
+        max_ki:
+          type: integer
+        attack:
+          type: integer
+        defense:
+          type: integer
+        speed:
+          type: integer
+        gold:
+          type: integer
+        location:
+          type: string
+        critical_chance:
+          type: number
+          format: float
+        critical_damage:
+          type: number
+          format: float
+        dodge_chance:
+          type: number
+          format: float
+        created_at:
+          type: string
+          format: date-time
+    
+    ProfileResponse:
+      type: object
+      properties:
+        character:
+          $ref: '#/components/schemas/Character'
+        equipped_items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/Skill'
+        total_stats:
+          type: object
+          properties:
+            hp:
+              type: integer
+            ki:
+              type: integer
+            attack:
+              type: integer
+            defense:
+              type: integer
+            speed:
+              type: integer
+    
+    BattleResponse:
+      type: object
+      properties:
+        won:
+          type: boolean
+        rounds:
+          type: array
+          items:
+            $ref: '#/components/schemas/BattleRound'
+        monsters_defeated:
+          type: integer
+        exp_gained:
+          type: integer
+        gold_gained:
+          type: integer
+        items_dropped:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+        leveled_up:
+          type: boolean
+        new_level:
+          type: integer
+          nullable: true
+        quest_rewards:
+          type: array
+          items:
+            type: object
+    
+    BattleRound:
+      type: object
+      properties:
+        round_number:
+          type: integer
+        character_action:
+          type: string
+        character_damage:
+          type: integer
+        monster_action:
+          type: string
+        monster_damage:
+          type: integer
+        character_hp:
+          type: integer
+        monster_hp:
+          type: integer
+        is_critical:
+          type: boolean
+        is_dodge:
+          type: boolean
+    
+    Item:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        item_type:
+          type: string
+          enum: [weapon, armor, accessory, consumable]
+        description:
+          type: string
+        hp_bonus:
+          type: integer
+        ki_bonus:
+          type: integer
+        attack_bonus:
+          type: integer
+        defense_bonus:
+          type: integer
+        speed_bonus:
+          type: integer
+        price:
+          type: integer
+        required_level:
+          type: integer
+        is_consumable:
+          type: boolean
+    
+    Skill:
+      type: object
+      properties:
+        nclass_id:
+          type: integer
+        skill_id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        current_point:
+          type: integer
+          minimum: 1
+          maximum: 7
+        max_point:
+          type: integer
+        ki_cost:
+          type: integer
+        damage_multiplier:
+          type: number
+          format: float
+        skill_type:
+          type: integer
+          description: "1=Attack, 2=Heal, 3=Buff, 4=Special"
+    
+    InventoryResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Item'
+              - type: object
+                properties:
+                  quantity:
+                    type: integer
+                  equipped:
+                    type: boolean
+        total_items:
+          type: integer
+        total_pages:
+          type: integer
+        current_page:
+          type: integer
+    
+    ShopResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Item'
+        total_items:
+          type: integer
+        total_pages:
+          type: integer
+    
+    SkillsResponse:
+      type: object
+      properties:
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/Skill'
+        total_skills:
+          type: integer
+    
+    DailyQuestResponse:
+      type: object
+      properties:
+        quests:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              type:
+                type: string
+              description:
+                type: string
+              progress:
+                type: integer
+              required:
+                type: integer
+              completed:
+                type: boolean
+              rewards:
+                type: object
+                properties:
+                  exp:
+                    type: integer
+                  gold:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      type: integer
+        all_completed:
+          type: boolean
+        claimed:
+          type: boolean
+    
+    SenzuResponse:
+      type: object
+      properties:
+        level:
+          type: integer
+        current_beans:
+          type: integer
+        harvest_interval:
+          type: integer
+          description: Seconds between harvests
+        beans_per_harvest:
+          type: integer
+        last_harvest:
+          type: string
+          format: date-time
+        next_harvest:
+          type: string
+          format: date-time
+        can_harvest:
+          type: boolean
+        upgrade_cost:
+          type: integer
+          nullable: true
+    
+    LeaderboardResponse:
+      type: object
+      properties:
+        players:
+          type: array
+          items:
+            type: object
+            properties:
+              rank:
+                type: integer
+              discord_id:
+                type: string
+              username:
+                type: string
+              level:
+                type: integer
+              power:
+                type: integer
+              gold:
+                type: integer
+        total_players:
+          type: integer
+        current_page:
+          type: integer
+        total_pages:
+          type: integer
+    
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error code
+        message:
+          type: string
+          description: User-friendly error message (Vietnamese)
+        retry_after:
+          type: integer
+          nullable: true
+          description: Seconds to wait before retry (for rate limits)
+
+  securitySchemes:
+    DiscordOAuth:
+      type: oauth2
+      flows:
+        authorizationCode:
+          authorizationUrl: https://discord.com/api/oauth2/authorize
+          tokenUrl: https://discord.com/api/oauth2/token
+          scopes:
+            identify: Identify user
+            guilds: Access user's guilds
+
+security:
+  - DiscordOAuth: [identify, guilds]
