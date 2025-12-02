@@ -31,8 +31,8 @@ Bot RPG lấy vibe Ngọc Rồng Online, viết bằng TypeScript + Discord.js +
 ### 1. Clone repository
 
 ```bash
-git clone <your-repo-url>
-cd nrodiscord
+git clone https://github.com/quanghai2k4/ngoc-rong-discord-bot.git
+cd ngoc-rong-discord-bot
 ```
 
 ### 2. Tạo Discord Bot
