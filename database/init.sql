@@ -37,6 +37,9 @@ CREATE TABLE IF NOT EXISTS characters (
     speed INTEGER DEFAULT 10,
     gold INTEGER DEFAULT 100,
     location VARCHAR(255) DEFAULT 'Làng Aru',
+    senzu_level INTEGER DEFAULT 1,
+    senzu_beans INTEGER DEFAULT 0,
+    senzu_last_harvest TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(player_id)
 );
@@ -135,7 +138,22 @@ CREATE TABLE IF NOT EXISTS battle_logs (
     battle_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Skills table
+-- Skill Template table (new system - từ game gốc)
+CREATE TABLE IF NOT EXISTS skill_template (
+    nclass_id INTEGER NOT NULL,
+    skill_id INTEGER NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    max_point INTEGER DEFAULT 7,
+    mana_use_type INTEGER DEFAULT 0,
+    skill_type INTEGER NOT NULL, -- 1=Attack, 2=Heal, 3=Buff/Debuff, 4=Special
+    icon_id INTEGER DEFAULT 0,
+    dam_info TEXT,
+    slot INTEGER DEFAULT 0,
+    skill_levels JSONB NOT NULL,
+    PRIMARY KEY (nclass_id, skill_id)
+);
+
+-- Skills table (old system - deprecated, kept for compatibility)
 CREATE TABLE IF NOT EXISTS skills (
     id SERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
@@ -154,13 +172,16 @@ CREATE TABLE IF NOT EXISTS skills (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Character skills (learned skills)
+-- Character skills (new system - tracks learned skills from skill_template)
 CREATE TABLE IF NOT EXISTS character_skills (
     id SERIAL PRIMARY KEY,
     character_id INTEGER REFERENCES characters(id) ON DELETE CASCADE,
-    skill_id INTEGER REFERENCES skills(id),
+    nclass_id INTEGER NOT NULL,
+    skill_id INTEGER NOT NULL,
+    current_point INTEGER DEFAULT 1, -- Current level (1 to max_point)
     learned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(character_id, skill_id)
+    UNIQUE(character_id, nclass_id, skill_id),
+    FOREIGN KEY (nclass_id, skill_id) REFERENCES skill_template(nclass_id, skill_id)
 );
 
 -- Monster skills
@@ -263,3 +284,45 @@ CREATE INDEX idx_character_daily_quests_completed ON character_daily_quests(comp
 CREATE INDEX idx_xp_logs_character_id ON xp_logs(character_id);
 CREATE INDEX idx_xp_logs_created_at ON xp_logs(created_at);
 CREATE INDEX idx_character_stats_total_xp ON character_stats(total_xp_earned DESC);
+
+-- Helper function: Get character skills với full info từ skill_template
+CREATE OR REPLACE FUNCTION get_character_skills(p_character_id INTEGER)
+RETURNS TABLE (
+    character_id INTEGER,
+    nclass_id INTEGER,
+    skill_id INTEGER,
+    name VARCHAR,
+    current_point INTEGER,
+    max_point INTEGER,
+    mana_use_type INTEGER,
+    skill_type INTEGER,
+    icon_id INTEGER,
+    dam_info TEXT,
+    slot INTEGER,
+    skill_levels JSONB,
+    current_level_data JSONB,
+    learned_at TIMESTAMP
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        cs.character_id,
+        cs.nclass_id,
+        cs.skill_id,
+        st.name,
+        cs.current_point,
+        st.max_point,
+        st.mana_use_type,
+        st.skill_type,
+        st.icon_id,
+        st.dam_info,
+        st.slot,
+        st.skill_levels,
+        (st.skill_levels->>(cs.current_point - 1))::jsonb as current_level_data,
+        cs.learned_at
+    FROM character_skills cs
+    INNER JOIN skill_template st ON cs.nclass_id = st.nclass_id AND cs.skill_id = st.skill_id
+    WHERE cs.character_id = p_character_id
+    ORDER BY st.slot ASC;
+END;
+$$ LANGUAGE plpgsql;

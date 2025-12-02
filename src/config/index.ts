@@ -68,9 +68,9 @@ export const UI_CONFIG = {
 // Database Config
 export const DB_CONFIG = {
   POOL: {
-    MAX: 20,
-    IDLE_TIMEOUT: 30000,
-    CONNECTION_TIMEOUT: 10000, // 10 seconds - tăng timeout cho startup
+    MAX: 30, // Tăng từ 20 lên 30 connections
+    IDLE_TIMEOUT: 10000, // Giảm từ 30s xuống 10s
+    CONNECTION_TIMEOUT: 10000,
   },
   QUERY: {
     SLOW_QUERY_THRESHOLD: 100, // ms
@@ -83,6 +83,8 @@ export const CACHE_CONFIG = {
   ITEMS_TTL: 10 * 60 * 1000, // 10 minutes
   SKILLS_TTL: 10 * 60 * 1000, // 10 minutes
   STATIC_DATA_TTL: 30 * 60 * 1000, // 30 minutes - reload game data cache
+  CHARACTER_TTL: 300, // 5 minutes (in seconds for Redis)
+  PLAYER_CHARACTER_TTL: 300, // 5 minutes
 } as const;
 
 // Locations

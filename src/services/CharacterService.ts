@@ -2,6 +2,7 @@ import { query } from '../database/db';
 import { Character, CharacterRace } from '../types';
 import { SkillService } from './SkillService';
 import { gameDataCache } from './GameDataCache';
+import { redisService } from './RedisService';
 import { STARTING_HP, STARTING_KI, STARTING_ATTACK, STARTING_DEFENSE } from '../utils/constants';
 import { GAME_CONFIG, getRandomLocation, isBossOnlyLocation, getRequiredExp } from '../config';
 
@@ -19,6 +20,28 @@ export class CharacterService {
   static isBossOnlyLocation(location: string): boolean {
     return isBossOnlyLocation(location);
   }
+
+  /**
+   * Tối ưu: Lấy character với Redis cache
+   */
+  static async findByPlayerIdCached(playerId: number, discordId?: string): Promise<Character | null> {
+    // Nếu có discordId, thử cache trước
+    if (discordId && redisService.isHealthy()) {
+      const cached = await redisService.getCachedCharacter(discordId);
+      if (cached) return cached;
+    }
+
+    // Không có cache, query DB
+    const character = await this.findByPlayerId(playerId);
+    
+    // Cache lại nếu tìm thấy
+    if (character && discordId && redisService.isHealthy()) {
+      await redisService.cacheCharacter(discordId, character);
+    }
+    
+    return character;
+  }
+
   static async findByPlayerId(playerId: number): Promise<Character | null> {
     const result = await query(
       `SELECT id, player_id, race_id, name, level, experience, hp, max_hp, ki, max_ki, 
@@ -46,13 +69,19 @@ export class CharacterService {
     const defense = STARTING_DEFENSE + race.defense_bonus;
 
     // Xác định vị trí bắt đầu theo chủng tộc
-    // Tạm thời tất cả races đều bắt đầu ở Rừng Karin (có monsters level 1-3)
-    const startingLocation = 'Rừng Karin';
+    let startingLocation = 'Làng Aru'; // Default
+    if (raceId === 0) {
+      startingLocation = 'Nhà Kame'; // Trái Đất
+    } else if (raceId === 1) {
+      startingLocation = 'Làng Moori'; // Namek
+    } else if (raceId === 2) {
+      startingLocation = 'Hành Tinh Vegeta'; // Saiyan
+    }
 
     const result = await query(
       `INSERT INTO characters 
-       (player_id, race_id, name, max_hp, hp, max_ki, ki, attack, defense, location) 
-       VALUES ($1, $2, $3, $4, $4, $5, $5, $6, $7, $8) 
+       (player_id, race_id, name, max_hp, hp, max_ki, ki, attack, defense, location, senzu_level, senzu_beans) 
+       VALUES ($1, $2, $3, $4, $4, $5, $5, $6, $7, $8, 1, 0) 
        RETURNING *`,
       [playerId, raceId, name, maxHp, maxKi, attack, defense, startingLocation]
     );
@@ -75,7 +104,7 @@ export class CharacterService {
     return gameDataCache.getRaceById(raceId) || null;
   }
 
-  static async updateStats(characterId: number, stats: Partial<Character>): Promise<void> {
+  static async updateStats(characterId: number, stats: Partial<Character>, discordId?: string): Promise<void> {
     const fields = Object.keys(stats);
     const values = Object.values(stats);
     const setClause = fields.map((field, i) => `${field} = $${i + 1}`).join(', ');
@@ -84,6 +113,11 @@ export class CharacterService {
       `UPDATE characters SET ${setClause} WHERE id = $${fields.length + 1}`,
       [...values, characterId]
     );
+
+    // Invalidate cache sau khi update
+    if (discordId && redisService.isHealthy()) {
+      await redisService.invalidateCharacter(discordId);
+    }
   }
 
   static async addExperience(characterId: number, exp: number): Promise<Character> {

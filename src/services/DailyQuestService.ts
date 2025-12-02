@@ -362,4 +362,32 @@ export class DailyQuestService {
       totalRewards: { exp: totalExp, gold: totalGold, items }
     };
   }
+
+  /**
+   * Claim all completed quests (wrapper for UI compatibility)
+   */
+  static async claimAllCompletedQuests(characterId: number): Promise<{
+    totalClaimed: number;
+    totalExp: number;
+    totalGold: number;
+    itemsReceived: string[];
+  }> {
+    const result = await this.claimAllRewards(characterId);
+    
+    if (!result.success || !result.totalRewards) {
+      return {
+        totalClaimed: 0,
+        totalExp: 0,
+        totalGold: 0,
+        itemsReceived: []
+      };
+    }
+
+    return {
+      totalClaimed: result.totalRewards.items.length > 0 ? result.totalRewards.items.length : 1,
+      totalExp: result.totalRewards.exp,
+      totalGold: result.totalRewards.gold,
+      itemsReceived: result.totalRewards.items
+    };
+  }
 }

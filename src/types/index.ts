@@ -35,6 +35,9 @@ export interface Character {
   critical_chance: number;
   critical_damage: number;
   dodge_chance: number;
+  senzu_level: number;
+  senzu_beans: number;
+  senzu_last_harvest: Date | null;
   created_at: Date;
 }
 

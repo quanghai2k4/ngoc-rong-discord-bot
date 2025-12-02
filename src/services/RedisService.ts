@@ -219,6 +219,56 @@ class RedisService {
       return false;
     }
   }
+
+  // ============ Character Caching Methods ============
+  
+  /**
+   * Cache character data với TTL 5 phút
+   */
+  async cacheCharacter(discordId: string, character: any): Promise<void> {
+    const key = `character:${discordId}`;
+    await this.set(key, character, 300); // 5 minutes TTL
+  }
+
+  /**
+   * Lấy character từ cache
+   */
+  async getCachedCharacter(discordId: string): Promise<any | null> {
+    const key = `character:${discordId}`;
+    return await this.get(key);
+  }
+
+  /**
+   * Invalidate character cache khi có update
+   */
+  async invalidateCharacter(discordId: string): Promise<void> {
+    const key = `character:${discordId}`;
+    await this.delete(key);
+  }
+
+  /**
+   * Cache player+character combo (tối ưu cho các command thường dùng)
+   */
+  async cachePlayerCharacter(discordId: string, data: { player: any; character: any }): Promise<void> {
+    const key = `player_char:${discordId}`;
+    await this.set(key, data, 300); // 5 minutes TTL
+  }
+
+  /**
+   * Lấy player+character từ cache
+   */
+  async getCachedPlayerCharacter(discordId: string): Promise<{ player: any; character: any } | null> {
+    const key = `player_char:${discordId}`;
+    return await this.get(key);
+  }
+
+  /**
+   * Invalidate player character cache
+   */
+  async invalidatePlayerCharacter(discordId: string): Promise<void> {
+    const key = `player_char:${discordId}`;
+    await this.delete(key);
+  }
 }
 
 // Export singleton instance

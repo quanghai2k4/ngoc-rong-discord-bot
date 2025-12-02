@@ -313,13 +313,13 @@ INSERT INTO monster_skills (monster_id, skill_id, use_probability) VALUES
 -- ==========================================
 INSERT INTO daily_quest_templates (name, description, quest_type, target_id, required_amount, exp_reward, gold_reward, item_reward_id, min_level) VALUES
 -- Kill Monsters Quests
-('Săn Ốc Sên', 'Đánh bại 10 con Ốc Sên', 'kill_monsters', 1, 10, 50, 100, NULL, 1),
-('Tiêu Diệt Khủng Long Xanh', 'Đánh bại 8 con Khủng Long Xanh', 'kill_monsters', 2, 8, 80, 150, NULL, 2),
-('Tiêu Diệt Khủng Long Đỏ', 'Đánh bại 8 con Khủng Long Đỏ', 'kill_monsters', 3, 8, 100, 180, NULL, 3),
-('Diệt Quỷ Đất', 'Đánh bại 12 con Quỷ Đất', 'kill_monsters', 4, 12, 120, 200, NULL, 3),
-('Săn Kỉ Nhân', 'Đánh bại 10 con Kỉ Nhân', 'kill_monsters', 7, 10, 200, 400, NULL, 5),
-('Tiêu Diệt Lính Fide', 'Đánh bại 15 Lính Fide', 'kill_monsters', 10, 15, 350, 600, NULL, 8),
-('Săn Khỉ Lính', 'Đánh bại 12 con Khỉ Lính', 'kill_monsters', 14, 12, 500, 800, NULL, 10),
+('Săn Sói Hoang', 'Đánh bại 10 con Sói Hoang', 'kill_monsters', 1, 10, 50, 100, NULL, 1),
+('Tiêu Diệt Rắn Độc', 'Đánh bại 8 con Rắn Độc', 'kill_monsters', 2, 8, 80, 150, NULL, 2),
+('Tiêu Diệt Gấu Hoang', 'Đánh bại 8 con Gấu Hoang', 'kill_monsters', 3, 8, 100, 180, NULL, 3),
+('Diệt Khủng Long Nhỏ', 'Đánh bại 12 con Khủng Long Nhỏ', 'kill_monsters', 4, 12, 120, 200, NULL, 3),
+('Săn Tên Cướp', 'Đánh bại 10 Tên Cướp', 'kill_monsters', 6, 10, 200, 400, NULL, 5),
+('Tiêu Diệt Lính Canh', 'Đánh bại 15 Lính Canh', 'kill_monsters', 7, 15, 350, 600, NULL, 8),
+('Săn Quân Đội RR', 'Đánh bại 12 quân Đội RR', 'kill_monsters', 11, 12, 500, 800, NULL, 10),
 ('Diệt Quái Vật Đại Lục', 'Đánh bại 20 Quái Vật bất kỳ', 'kill_monsters', NULL, 20, 300, 500, NULL, 5),
 
 -- Boss Quests
@@ -328,7 +328,7 @@ INSERT INTO daily_quest_templates (name, description, quest_type, target_id, req
 ('Chiến Thắng Boss', 'Đánh bại 1 Boss bất kỳ', 'defeat_boss', NULL, 1, 400, 800, NULL, 8),
 
 -- Skill Usage Quests  
-('Luyện Tập Kamehameha', 'Sử dụng skill Kamehameha 5 lần', 'use_skills', 13, 5, 100, 150, NULL, 3),
+('Luyện Tập Kỹ Năng', 'Sử dụng bất kỳ skill nào 5 lần', 'use_skills', NULL, 5, 100, 150, NULL, 3),
 ('Rèn Luyện Kỹ Năng', 'Sử dụng bất kỳ skill nào 10 lần', 'use_skills', NULL, 10, 150, 200, NULL, 3),
 
 -- Gold & Hunt Quests

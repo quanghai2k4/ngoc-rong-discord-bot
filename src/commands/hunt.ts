@@ -14,8 +14,7 @@ export const huntCommand: Command = {
     .setDescription('Đi săn quái vật để kiếm kinh nghiệm và vàng'),
 
   async execute(interaction) {
-    await interaction.deferReply();
-
+    // Đã defer trong index.ts
     try {
       // Validate character và HP
       const { character } = await validateBattleReady(interaction);
@@ -32,71 +31,58 @@ export const huntCommand: Command = {
         return;
       }
 
-      // Hiển thị battle start
-      const startEmbed = createBattleStartEmbed(newLocation, monsters);
-      await interaction.editReply({ embeds: [startEmbed] });
+      // Simulate battle ngay lập tức
+      const result = await BattleService.battle(character, monsters);
 
-      // Simulate battle
-      setTimeout(async () => {
-        try {
-          const result = await BattleService.battle(character, monsters);
+      // Tạo battle log và summary
+      const hasBoss = monsters.some(m => m.is_boss || m.is_super);
+      const battleLog = createBattleLog(result.rounds, character, monsters);
+      
+      // Nếu là quái thường, thêm summary vào description
+      let summaryDescription = '';
+      if (!hasBoss) {
+        // Lấy HP cuối cùng từ round cuối
+        const finalRound = result.rounds[result.rounds.length - 1];
+        summaryDescription = createHuntSummary(
+          result.won, 
+          monsters, 
+          result.rounds.length,
+          finalRound?.characterHp,
+          character.max_hp,
+          finalRound?.monsterStates
+        );
+      }
 
-          // Tạo battle log và summary
-          const hasBoss = monsters.some(m => m.is_boss || m.is_super);
-          const battleLog = createBattleLog(result.rounds, character, monsters);
-          
-          // Nếu là quái thường, thêm summary vào description
-          let summaryDescription = '';
-          if (!hasBoss) {
-            // Lấy HP cuối cùng từ round cuối
-            const finalRound = result.rounds[result.rounds.length - 1];
-            summaryDescription = createHuntSummary(
-              result.won, 
-              monsters, 
-              result.rounds.length,
-              finalRound?.characterHp,
-              character.max_hp,
-              finalRound?.monsterStates
-            );
-          }
+      // Tạo result embed
+      const resultEmbed = createBattleResultEmbed(
+        result.won,
+        battleLog,
+        result.expGained,
+        result.goldGained,
+        result.itemsDropped,
+        result.rounds.length,
+        result.monstersDefeated,
+        monsters.length
+      );
 
-          // Tạo result embed
-          const resultEmbed = createBattleResultEmbed(
-            result.won,
-            battleLog,
-            result.expGained,
-            result.goldGained,
-            result.itemsDropped,
-            result.rounds.length,
-            result.monstersDefeated,
-            monsters.length
-          );
+      // Thêm summary cho quái thường
+      if (summaryDescription) {
+        resultEmbed.setDescription(summaryDescription);
+      }
 
-          // Thêm summary cho quái thường
-          if (summaryDescription) {
-            resultEmbed.setDescription(summaryDescription);
-          }
+      await interaction.editReply({ embeds: [resultEmbed] });
 
-          await interaction.editReply({ embeds: [resultEmbed] });
+      // Gửi quest rewards riêng nếu có
+      if (result.won && result.questRewards.length > 0) {
+        const questRewardsEmbed = createQuestRewardsEmbed(result.questRewards);
+        await interaction.followUp({ embeds: [questRewardsEmbed] });
+      }
 
-          // Gửi quest rewards riêng nếu có
-          if (result.won && result.questRewards.length > 0) {
-            const questRewardsEmbed = createQuestRewardsEmbed(result.questRewards);
-            await interaction.followUp({ embeds: [questRewardsEmbed] });
-          }
-
-          // Gửi tin nhắn level up riêng nếu có
-          if (result.won && result.leveledUp && result.newLevel) {
-            const levelUpEmbed = createLevelUpEmbed(result.newLevel);
-            await interaction.followUp({ embeds: [levelUpEmbed] });
-          }
-        } catch (error) {
-          console.error('[hunt.ts] Battle error:', error);
-          await interaction.editReply({ 
-            embeds: [createErrorEmbed('❌ Có lỗi xảy ra trong trận chiến!')] 
-          });
-        }
-      }, 2000);
+      // Gửi tin nhắn level up riêng nếu có
+      if (result.won && result.leveledUp && result.newLevel) {
+        const levelUpEmbed = createLevelUpEmbed(result.newLevel);
+        await interaction.followUp({ embeds: [levelUpEmbed] });
+      }
     } catch (error: any) {
       console.error('[hunt.ts] Error:', error);
       const errorMessage = error.message || '❌ Có lỗi xảy ra!';

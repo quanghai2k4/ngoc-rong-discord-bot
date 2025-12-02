@@ -40,6 +40,7 @@ import { rankCommand } from './commands/rank';
 import { leaderboardCommand } from './commands/leaderboard';
 import { dragonballsCommand } from './commands/dragonballs';
 import { summonCommand } from './commands/summon';
+import { senzuCommand } from './commands/senzu';
 
 export interface Command {
   data: SlashCommandBuilder;
@@ -76,6 +77,7 @@ commands.set('rank', rankCommand);
 commands.set('leaderboard', leaderboardCommand);
 commands.set('dragonballs', dragonballsCommand);
 commands.set('summon', summonCommand);
+commands.set('senzu', senzuCommand);
 
 client.once('ready', async () => {
   logger.success(`Bot đã sẵn sàng! Đăng nhập với tên ${client.user?.tag}`);
@@ -140,18 +142,6 @@ client.once('ready', async () => {
 client.on('interactionCreate', async (interaction) => {
   if (!interaction.isChatInputCommand()) return;
 
-  // Check rate limit
-  const { checkRateLimit } = await import('./middleware/validate');
-  const rateLimitCheck = await checkRateLimit(interaction.user.id);
-  
-  if (!rateLimitCheck.allowed) {
-    await interaction.reply({
-      content: rateLimitCheck.message || '⏱️ Rate limited',
-      ephemeral: true,
-    });
-    return;
-  }
-
   const command = commands.get(interaction.commandName);
 
   if (!command) {
@@ -159,20 +149,31 @@ client.on('interactionCreate', async (interaction) => {
     return;
   }
 
+  // Defer reply immediately để tránh timeout
+  await interaction.deferReply().catch(() => {});
+
   try {
+    // Check rate limit
+    const { checkRateLimit } = await import('./middleware/validate');
+    const rateLimitCheck = await checkRateLimit(interaction.user.id);
+    
+    if (!rateLimitCheck.allowed) {
+      await interaction.editReply({
+        content: rateLimitCheck.message || '⏱️ Rate limited',
+      });
+      return;
+    }
+
     await command.execute(interaction);
   } catch (error) {
     logger.error(`Lỗi khi thực thi command ${interaction.commandName}`, error);
     
-    const errorMessage = { 
-      content: '❌ Đã xảy ra lỗi khi thực hiện lệnh này!', 
-      ephemeral: true 
-    };
+    const errorMessage = '❌ Đã xảy ra lỗi khi thực hiện lệnh này!';
     
-    if (interaction.replied || interaction.deferred) {
-      await interaction.followUp(errorMessage);
+    if (interaction.deferred) {
+      await interaction.editReply({ content: errorMessage }).catch(() => {});
     } else {
-      await interaction.reply(errorMessage);
+      await interaction.followUp({ content: errorMessage, ephemeral: true }).catch(() => {});
     }
   }
 });
