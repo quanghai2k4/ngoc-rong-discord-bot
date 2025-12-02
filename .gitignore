@@ -49,3 +49,13 @@ vibenro.sql
 test_*.js
 test_*.py
 *_test.js
+
+# Documentation files (keep only AGENTS.md and README.md)
+API_DOCUMENTATION.md
+DEPLOYMENT.md
+FEATURE_ANALYSIS.md
+OPTIMIZATION.md
+QUICK_DEPLOY.md
+SENZU_SYSTEM.md
+UPGRADE_SUMMARY.md
+report.md
