@@ -26,6 +26,14 @@ Bot RPG lấy vibe Ngọc Rồng Online, viết bằng TypeScript + Discord.js +
 * Docker & Docker Compose
 * Discord Bot Token
 
+## Tech Stack
+
+* **Bot**: Discord.js v14 + TypeScript
+* **Database**: PostgreSQL 17
+* **Cache**: Redis 7
+* **Container**: Docker & Docker Compose
+* **Runtime**: Node.js 20
+
 ## Cách setup nhanh
 
 ### 1. Clone repository
@@ -64,15 +72,45 @@ Chỉnh sửa `.env`:
 DISCORD_TOKEN=your_discord_bot_token_here
 DISCORD_CLIENT_ID=your_client_id_here
 DATABASE_URL=postgresql://postgres:password@localhost:5432/ngoc_rong_db
+REDIS_URL=redis://:redispassword@localhost:6379
+REDIS_PASSWORD=redispassword
 NODE_ENV=development
+
+# Optional
+LOG_LEVEL=INFO
+DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/YOUR_WEBHOOK_ID/YOUR_WEBHOOK_TOKEN
 ```
 
 ### 4. Chạy bằng Docker
 
+**Phương pháp 1: Sử dụng Docker Hub (Khuyến nghị - Nhanh nhất)**
+
+Bot đã được build sẵn và push lên Docker Hub. Chỉ cần pull và chạy:
+
 ```bash
+# Pull image từ Docker Hub và start services
 docker-compose up -d
+
+# Xem logs
 docker-compose logs -f bot
+
+# Stop services
 docker-compose down
+```
+
+**Phương pháp 2: Build từ source code**
+
+Nếu bạn muốn build image từ source code local:
+
+```bash
+# Build image
+docker build -t ngoc-rong-bot .
+
+# Sửa docker-compose.yml: thay 'image: quanghai2k4/ngoc-rong-bot:latest' 
+# thành 'build: .'
+
+# Start services
+docker-compose up -d
 ```
 
 ### 5. Chạy local (không dùng Docker)
@@ -223,22 +261,23 @@ npm run db:optimize
 
 ### Database
 
-* Indexes
-* Partial indexes
-* Composite indexes
-* VACUUM & ANALYZE
+* Indexes cho các query thường dùng
+* Partial indexes cho monster types (boss/normal)
+* Composite indexes cho joins
+* VACUUM & ANALYZE để cập nhật statistics
 
-### Caching
+### Caching với Redis
 
-* Cache static data (monsters, items, skills)
-* TTL-based cache
-* CacheService cho dynamic queries
+* **GameDataCache**: Cache static data (monsters, items, skills) vào memory
+* **TTL-based cache**: Tự động reload khi hết hạn
+* **CacheService**: Cache cho dynamic queries
+* **Rate Limiting**: Giới hạn request để tránh spam
 
 ### Code Quality
 
-* Logger Service
-* Environment validation
-* ESLint
+* Logger Service với log levels
+* Environment validation khi startup
+* ESLint cho code consistency
 * TypeScript strict mode
 
 ## Credits
