@@ -50,6 +50,12 @@ test_*.js
 test_*.py
 *_test.js
 
+# Scripts
+*.sh
+deploy.sh
+push-to-dockerhub.sh
+docker-entrypoint.sh
+
 # Documentation files (keep only AGENTS.md and README.md)
 API_DOCUMENTATION.md
 DEPLOYMENT.md
