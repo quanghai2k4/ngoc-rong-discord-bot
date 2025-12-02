@@ -67,8 +67,18 @@ NAME                IMAGE                    STATUS
 ngoc_rong_bot       nrodiscord-bot          Up 30 seconds (healthy)
 ngoc_rong_db        postgres:17-alpine      Up 35 seconds (healthy)
 ngoc_rong_redis     redis:7-alpine          Up 35 seconds (healthy)
+ngoc_rong_swagger   swagger-ui:latest       Up 30 seconds (healthy)
 
 🎉 Deployment Complete!
+```
+
+### Access Services
+
+```
+Discord Bot:     Online in your Discord server
+Swagger UI:      http://localhost:8081
+PostgreSQL:      localhost:5432
+Redis:           localhost:6379
 ```
 
 ### Verify Bot is Online
@@ -84,6 +94,17 @@ docker-compose logs bot | tail -30
 # 🤖 Starting Discord bot...
 # [INFO] Bot logged in as YourBotName#1234
 # [INFO] Slash commands registered successfully
+```
+
+### Test Swagger UI
+
+```bash
+# Open in browser
+xdg-open http://localhost:8081  # Linux
+open http://localhost:8081      # macOS
+
+# Or curl
+curl http://localhost:8081
 ```
 
 ### Test Commands in Discord

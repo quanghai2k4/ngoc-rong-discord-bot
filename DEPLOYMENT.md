@@ -2,7 +2,7 @@
 
 ## 📋 Tổng Quan
 
-Bot được deploy với **3 Docker containers**:
+Bot được deploy với **4 Docker containers**:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -11,6 +11,7 @@ Bot được deploy với **3 Docker containers**:
 │  1. postgres     PostgreSQL 17 Alpine   │
 │  2. redis        Redis 7 Alpine         │
 │  3. bot          Node.js 22 Alpine      │
+│  4. swagger-ui   Swagger UI (API Docs)  │
 └─────────────────────────────────────────┘
 ```
 
@@ -37,6 +38,13 @@ Bot được deploy với **3 Docker containers**:
 │  - Items     │   │  - Jobs      │
 │  - Battles   │   │  - Locks     │
 └──────────────┘   └──────────────┘
+       │
+       ▼
+┌──────────────┐
+│ 📘 Swagger UI│
+│  - API Docs  │
+│  - Port 8081 │
+└──────────────┘
 ```
 
 ---
@@ -177,6 +185,51 @@ redis-cli -h localhost -p 6379 -a redispassword
 - Install production deps only
 - Final size: ~200MB
 ```
+
+### 4. Swagger UI Container
+
+**Image:** `swaggerapi/swagger-ui:latest`  
+**Port:** `8081` (mapped to host)  
+**Volume:** `./openapi.yaml` (read-only mount)  
+
+**Features:**
+- ✅ Interactive API documentation
+- ✅ "Try it out" functionality
+- ✅ Auto-loads từ openapi.yaml
+- ✅ Health check enabled
+- ✅ Lightweight (~5 MB RAM)
+
+**Configuration:**
+```yaml
+environment:
+  SWAGGER_JSON: /app/openapi.yaml
+
+volumes:
+  - ./openapi.yaml:/app/openapi.yaml:ro
+
+healthcheck:
+  test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/"]
+  interval: 10s
+  timeout: 5s
+  retries: 3
+```
+
+**Access:**
+```bash
+# Open in browser
+http://localhost:8081
+
+# Or from terminal
+xdg-open http://localhost:8081  # Linux
+open http://localhost:8081      # macOS
+```
+
+**Features:**
+- 📘 Interactive API documentation for 20 commands
+- 🧪 Test endpoints directly from browser
+- 📊 View request/response schemas
+- 🔍 Search functionality
+- 📱 Mobile-friendly UI
 
 ---
 
